@@ -1,0 +1,99 @@
+html, body{
+  padding:0;
+  margin:0;
+  height:100%;
+  overflow:hidden;
+  background-color:#fff;
+  font-family: 'Raleway', sans-serif;
+}
+
+*, *:before, *:after {
+  box-sizing: border-box;
+}
+
+#toggle-nav{
+  position:absolute;
+  top:0;
+  right:0;
+  padding:10px;
+  cursor:pointer;
+  transition:0.25s all;
+}
+
+#hamburger-nav{
+  position:absolute;
+  top:0;
+  left:-75%;
+  width:75%;
+  height:100%;
+  transition: left 0.5s ease;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#hamburger-nav.open{
+  left:0;
+}
+
+#hamburger-nav .center{
+  padding:20px;
+}
+#hamburger-nav .center span{
+  width:100%;
+  display:inline-block;
+  margin:0.65rem 0;
+}
+#hamburger-nav a{
+  font-size:30px;
+  font-weight:700;
+  transition:0.25s all;
+  color:#333;
+  text-decoration: none;
+}
+
+#toggle-nav:hover {
+  fill:#712519;
+}
+
+.credits{
+  position:absolute;
+  display:inline-block;
+  bottom:0;
+  left:0;
+  padding:5px;
+  width:100%;
+  font-weight:400;
+  text-align:center;
+  margin:0;
+  font-size:12px;
+  background-color:rgba(255, 255, 255, 0.75);
+}
+
+
+.credits a{
+  text-decoration: none;
+  color:#712519;
+}
+
+#loading{
+  width:100%;
+  height:100%;
+  position:absolute;
+  top:0;
+  left:0;
+  transition:1s all;
+  background-color:#111;
+  color:#fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#loading.loaded{
+  top:-100vh;
+}
+#hamburger-nav a.current, #hamburger-nav a:hover{
+  color:#712519;
+}
