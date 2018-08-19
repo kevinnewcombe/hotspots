@@ -6,23 +6,34 @@ var pixelRatio = 1.5;
 var screenWidth, screenHeight;
 
 // geometry
-var assetsDir = 'source/models/strat/';
-var assetsName = 'fender_guitar_mod';
-// var assetsDir = 'assets/';
-// var assetsName = 'guitar';
+var assetsDir = 'assets/';
+var modelName = 'guitar_mod';
+var mtlName = 'guitar';
 THREE.ImageUtils.crossOrigin = "";
 
 // markers
 let markerHelper;
 const markersContainer = new THREE.Object3D();
 const markerData = {
+
+  'tailpiece' : {
+    position : [-15.8,0,1.4],
+    headline : 'Tailpiece',
+    description : 'Lightweight Aluminum Stopbar'
+  },
   'bridge' : {
-    position : [-8.6,0,0.9],
-    description : 'This is some text about the bridge'
+    position : [-13.52,0,1.4],
+    headline : 'Bridge',
+    description : 'ABR-1 Tune-o-matic w/ Nylon Saddles'
+  },
+  'neckpickup' : {
+    position: [-6.96,1.78,1.4],
+    headline : 'Neck Pickup',
+    description : '68 Custom Humbucker'
   }
 };
 const markerBorderMaterial = new THREE.MeshBasicMaterial( { color: 0x000000 } );
-const markerInteriorMaterialDefault = new THREE.MeshBasicMaterial( { color: 0x666666 } );
+const markerInteriorMaterialDefault = new THREE.MeshBasicMaterial( { color: 0xffffff } );
 const markerInteriorMaterialHover = new THREE.MeshBasicMaterial( { color: 0xd52b1e } );
 const tooltipContainer = document.getElementById('tooltip');
 let activeMarker = null;
@@ -51,7 +62,7 @@ function init() {
  
   // camera
   camera = new THREE.PerspectiveCamera(10, aspectRatio, 0.1, 200000);
-  camera.position.set(0, 0, 100 );
+  camera.position.set(0, 0, 200 );
   scene.add(camera);
   camera.lookAt(new THREE.Vector3(0,0,0));
   controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -62,15 +73,45 @@ function init() {
   canvas.addEventListener('click', onCanvasClick);
 
   loadMarkers();
+  loadMarkerHelper();
   loadGuitar();
-  // loadMarkerHelper();
   animate();
 }
 
 
 function addLights(){
-  var light = new THREE.HemisphereLight( 0xffffff, 0x333333, 1 );
-  scene.add( light );
+  frontLight = new THREE.SpotLight(0xffffff);
+  backLight = new THREE.SpotLight(0xffffff);
+  
+  const lights = [
+    {
+      light : frontLight,
+      x : 0,
+      y : 0,
+      z : 450,
+      intensity :0.5
+    },
+    {
+      light : backLight,
+      x : 0,
+      y : 0,
+      z : -450,
+      intensity :0.5
+    }
+  ];
+
+
+  lights.forEach(function (lightObj) {
+    light = lightObj.light;
+    light.intensity = lightObj.intensity
+    light.position.set(lightObj.x,lightObj.y,lightObj.z);
+    light.castShadow = true;   
+    scene.add( light );
+  });
+    
+
+  // var light = new THREE.HemisphereLight( 0xffffff, 0x333333, 1 );
+  // scene.add( light );
 }
 
 function loadGuitar(){
@@ -90,13 +131,13 @@ function loadGuitar(){
   mtlLoader.setMaterialOptions( { side: THREE.DoubleSide } );
   mtlLoader.setPath( assetsDir );
   mtlLoader.crossOrigin = '';
-  mtlLoader.load( assetsName+'.mtl', function( materials ) {
+  mtlLoader.load( mtlName+'.mtl', function( materials ) {
     materials.preload();
 
     var objLoader = new THREE.OBJLoader();
     objLoader.setMaterials( materials );
     objLoader.setPath( assetsDir );
-    objLoader.load( assetsName+'.obj', function ( object ) {
+    objLoader.load( modelName+'.obj', function ( object ) {
       object.rotation.set(0, 0, 0 );
       object.traverse(function (child) {
         if (child instanceof THREE.Mesh) {
@@ -120,17 +161,17 @@ function loadMarkerHelper(){
     }
   };
   
-  var geometry = new THREE.CircleGeometry( 0.2, 32 );
+  var geometry = new THREE.CircleGeometry( 0.5, 32 );
   var material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
   markerHelper = new THREE.Mesh( geometry, material );
-  markerHelper.position.set(0,0,0.9);
+  markerHelper.position.set(0,0,1.4);
   scene.add( markerHelper );
   
   var gui = new dat.GUI();
   var markerGUI = gui.addFolder('Marker');markerGUI
-  markerGUI.add(markerHelper.position, 'x', -10, 10).step(0.1).listen();
-  markerGUI.add(markerHelper.position, 'y', -10, 10).step(0.1).listen();
-  markerGUI.add(markerHelper.position, 'z', -10, 10).step(0.1).listen();
+  markerGUI.add(markerHelper.position, 'x', -30, 30).step(0.01).listen();
+  markerGUI.add(markerHelper.position, 'y', -10, 10).step(0.01).listen();
+  markerGUI.add(markerHelper.position, 'z', -5, 5).step(0.1).listen();
   markerGUI.add(options, 'copyPosition');
   markerGUI.open();
 }
@@ -147,7 +188,7 @@ function loadMarkers(){
     // markerMesh.markerName = key;
     // markerContainer.add(markerMesh);
 
-    var geometry = new THREE.CircleGeometry( 0.2, 32 );
+    var geometry = new THREE.CircleGeometry( 0.5, 32 );
     markerMesh = new THREE.Mesh( geometry, markerInteriorMaterialDefault );
     markerMesh.meshType = 'innercircle';
     markerMesh.markerName = key;
@@ -173,7 +214,9 @@ function onCameraUpdate(){
 
 function positionMarker(){
   let position = toScreenPosition(activeMarker, camera);
-  if((position.x + tooltipContainer.offsetWidth) < screenWidth){
+  if(position.x < 0){
+    tooltipContainer.style.left = 0;
+  }else if((position.x + tooltipContainer.offsetWidth) < screenWidth){
     tooltipContainer.style.left = (position.x)+'px';
   }else{
     tooltipContainer.style.left = (screenWidth - tooltipContainer.offsetWidth)+'px';
@@ -228,7 +271,7 @@ function toScreenPosition(obj, camera){
 
   return { 
       x: vector.x / pixelRatio,
-      y: vector.y / pixelRatio
+      y: vector.y / pixelRatio,
   };
 };
 
@@ -241,7 +284,7 @@ function onCanvasClick(){
     if(intersects[0].object.markerName){
       marker = intersects[0].object;
       markerName = marker.markerName;
-      tooltipContainer.innerHTML = markerData[markerName].description;
+      tooltipContainer.innerHTML = '<h5>'+markerData[markerName].headline+'</h5><p>'+markerData[markerName].description+'</p>';
     }
   }
   if(markerName){
@@ -249,7 +292,7 @@ function onCanvasClick(){
     tooltipContainer.classList.add('is-visible');
     positionMarker();
   }else{
-    // tooltipContainer.classList.remove('is-visible');
+    tooltipContainer.classList.remove('is-visible');
   }
 }
 
