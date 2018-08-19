@@ -7,7 +7,8 @@ var frontLight, leftLight, rightLight;
 
 var sceneContainer = new THREE.Object3D();
 var cubeContainer = new THREE.Object3D();
-var assetsDir = 'assets/';
+var assetsDir = 'source/models/strat/';
+var assetsName = 'fender_guitar_mod';
 THREE.ImageUtils.crossOrigin = "";
 
 
@@ -25,7 +26,7 @@ function init() {
 
   // camera
   camera = new THREE.PerspectiveCamera(10, aspectRatio, 0.1, 200000);
-  camera.position.set(0, 0, 20 );
+  camera.position.set(0, 0, 100 );
   scene.add(camera);
   camera.lookAt(new THREE.Vector3(0,0,0));
   controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -42,10 +43,10 @@ function addLights(){
   const lights = [
     {
       light : frontLight,
-      x : 0,
-      y : 0,
+      x : 10,
+      y : 10,
       z : 450,
-      intensity :0.5
+      intensity :0.2
     }
   ];
 
@@ -79,21 +80,20 @@ function loadGeometry(){
   mtlLoader.setMaterialOptions( { side: THREE.DoubleSide } );
   mtlLoader.setPath( assetsDir );
   mtlLoader.crossOrigin = '';
-  mtlLoader.load( 'guitar.mtl', function( materials ) {
+  mtlLoader.load( assetsName+'.mtl', function( materials ) {
     materials.preload();
 
     var objLoader = new THREE.OBJLoader();
     objLoader.setMaterials( materials );
-    objLoader.setPath( 'assets/' );
-    objLoader.load( 'guitar.obj', function ( object ) {
-      object.rotation.set(0, 0,  THREE.Math.degToRad(-3) );
-      // object.traverse(function (child) {
-      //   if (child instanceof THREE.Mesh) {
-      //     child.material.shininess = 0;
-      //     child.castShadow = true;
-      //     child.receiveShadow = false;
-      //   }
-      // });
+    objLoader.setPath( assetsDir );
+    objLoader.load( assetsName+'.obj', function ( object ) {
+      object.rotation.set(0, 0, 0 );
+      object.traverse(function (child) {
+        if (child instanceof THREE.Mesh) {
+          child.castShadow = true;
+          child.receiveShadow = false;
+        }
+      });
       scene.add(object);
       animate();
     }, onProgress);
