@@ -1,15 +1,22 @@
 var scene = new THREE.Scene();
 var renderer, camera;
-var width, height, aspectRatio, loader, textures, controls;
+var controls;
 
-// lights
-var frontLight, backLight, topLight;
-
-var sceneContainer = new THREE.Object3D();
-var cubeContainer = new THREE.Object3D();
+// geometry
 var assetsDir = 'source/models/strat/';
 var assetsName = 'fender_guitar_mod';
 THREE.ImageUtils.crossOrigin = "";
+
+// markers
+let markerHelper;
+const markerData = [
+  {
+    position : [-8.6,0,0.9],
+    name : 'bridge'
+  }
+];
+const markers = [];
+
 
 
 function init() {
@@ -33,60 +40,15 @@ function init() {
   camera.lookAt(new THREE.Vector3(0,0,0));
   controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.minPolarAngle = controls.maxPolarAngle = Math.PI/2;
- 
+  controls.addEventListener( 'change', onCameraUpdate );
   loadGeometry();
+  loadMarkers();
+  loadMarkerHelper();
 }
 
-function light_update(){
-  frontLight.position.copy( camera.position );
-  console.clear();
-  console.log(camera.position);
-  console.log(frontLight.position);
-}
+
 function addLights(){
-   
-  frontLight = new THREE.SpotLight(0xffffff);
-  backLight = new THREE.SpotLight(0xffffff);
-  topLight = new THREE.SpotLight(0xffffff);
-  
-  const lights = [
-    {
-      light : frontLight,
-      x : 10,
-      y : 10,
-      z : 450,
-      intensity : 0.2
-    },
-    {
-      light : backLight,
-      x : 10,
-      y : 10,
-      z : -450,
-      intensity : 0.2
-    },
-    {
-      light : topLight,
-      x : 10,
-      y : 450,
-      z : 10,
-      intensity : 0.2
-    }
-  ];
-
-
-  // lights.forEach(function (lightObj) {
-  //   light = lightObj.light;
-  //   light.intensity = lightObj.intensity
-  //   light.position.set(lightObj.x,lightObj.y,lightObj.z);
-  //   light.castShadow = true;   
-  //   scene.add( light );
-
-  //   var helper = new THREE.DirectionalLightHelper( light, 5 );
-  //   scene.add( helper );
-  // });
-  
   var light = new THREE.HemisphereLight( 0xffffff, 0x333333, 1.2 );
-  // light.position.set(10,10,450);
   scene.add( light );
 }
 
@@ -94,7 +56,7 @@ function loadGeometry(){
   var manager = new THREE.LoadingManager();
   var texture = new THREE.Texture();
   var lastPercent = 0;
-  var onProgress = function ( xhr) {
+  var onProgress = function ( xhr ) {
     console.clear();
     if ( xhr.lengthComputable ) {
       var percentComplete = Math.round(xhr.loaded / xhr.total * 100);
@@ -129,7 +91,61 @@ function loadGeometry(){
   });
 }
 
+function loadMarkerHelper(){
+  /*
+    For testing only 
+    use dat.gui to get the intended coordinates of a marker
+  */  
+  var options = {
+    copyPosition : function(){
+      alert(markerHelper.position.x+','+markerHelper.position.y+','+markerHelper.position.z);
+    }
+  };
+  
+  var geometry = new THREE.CircleGeometry( 0.2, 32 );
+  var material = new THREE.MeshBasicMaterial( { color: 0xffff00 } );
+  markerHelper = new THREE.Mesh( geometry, material );
+  markerHelper.position.set(0,0,0.9);
+  scene.add( markerHelper );
+  
+  var gui = new dat.GUI();
+  var markerGUI = gui.addFolder('Marker');markerGUI
+  markerGUI.add(markerHelper.position, 'x', -10, 10).step(0.1).listen();
+  markerGUI.add(markerHelper.position, 'y', -10, 10).step(0.1).listen();
+  markerGUI.add(markerHelper.position, 'z', -10, 10).step(0.1).listen();
+  markerGUI.add(options, 'copyPosition');
+  markerGUI.open();
+}
 
+function loadMarkers(){
+  markerData.forEach(function (marker) {
+    var markerContainer = new THREE.Object3D();
+
+    var geometry = new THREE.CircleGeometry( 0.3, 32 );
+    var material = new THREE.MeshBasicMaterial( { color: 0x000000 } );
+    markerMesh = new THREE.Mesh( geometry, material );
+    markerContainer.add(markerMesh);
+
+    var geometry = new THREE.CircleGeometry( 0.2, 32 );
+    var material = new THREE.MeshBasicMaterial( { color: 0xffffff } );
+    markerMesh = new THREE.Mesh( geometry, material );
+    markerContainer.add(markerMesh);
+
+    markerContainer.position.set(marker.position[0], marker.position[1],marker.position[2]);
+    markerContainer.targetName = marker.name;
+
+    markers.push(markerContainer);
+    scene.add( markerContainer );
+  });
+}
+
+function onCameraUpdate(){
+  // have the markers always face the camera
+  let cameraAngle = controls.getAzimuthalAngle();
+  markers.forEach(function (marker) {
+    marker.rotation.set(0, cameraAngle, 0);
+  });
+}
 function onWindowResize( event ) {
   width = window.innerWidth;
   height  = window.innerHeight;
