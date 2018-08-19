@@ -1,6 +1,7 @@
+// base
 var scene = new THREE.Scene();
 var renderer, camera;
-var controls;
+var controls, canvas;
 
 // geometry
 var assetsDir = 'source/models/strat/';
@@ -9,14 +10,22 @@ THREE.ImageUtils.crossOrigin = "";
 
 // markers
 let markerHelper;
-const markerData = [
-  {
+const markersContainer = new THREE.Object3D();
+const markerData = {
+  'bridge' : {
     position : [-8.6,0,0.9],
-    name : 'bridge'
+    description : 'This is some text about the bridge'
   }
-];
+};
+const markerBorderMaterial = new THREE.MeshBasicMaterial( { color: 0x000000 } );
+const markerInteriorMaterialDefault = new THREE.MeshBasicMaterial( { color: 0xffffff } );
+const markerInteriorMaterialHover = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
+
 const markers = [];
 
+// raycasting
+var raycaster = new THREE.Raycaster();
+var mouse = new THREE.Vector2();
 
 
 function init() {
@@ -30,6 +39,7 @@ function init() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   document.body.appendChild(renderer.domElement);
   window.addEventListener( 'resize', onWindowResize, false );
+  window.addEventListener( 'mousemove', onMouseMove, false );
   
   addLights();
  
@@ -41,9 +51,14 @@ function init() {
   controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.minPolarAngle = controls.maxPolarAngle = Math.PI/2;
   controls.addEventListener( 'change', onCameraUpdate );
-  loadGeometry();
+  canvas = document.getElementsByTagName('canvas');
+  canvas = canvas[0];
+  canvas.addEventListener('click', onCanvasClick);
+
   loadMarkers();
-  loadMarkerHelper();
+  loadGuitar();
+  // loadMarkerHelper();
+  animate();
 }
 
 
@@ -52,7 +67,7 @@ function addLights(){
   scene.add( light );
 }
 
-function loadGeometry(){
+function loadGuitar(){
   var manager = new THREE.LoadingManager();
   var texture = new THREE.Texture();
   var lastPercent = 0;
@@ -86,7 +101,6 @@ function loadGeometry(){
         }
       });
       scene.add(object);
-      animate();
     }, onProgress);
   });
 }
@@ -118,24 +132,27 @@ function loadMarkerHelper(){
 }
 
 function loadMarkers(){
-  markerData.forEach(function (marker) {
+  scene.add(markersContainer);
+  Object.keys(markerData).forEach(function(key) {
+    marker = markerData[key];
     var markerContainer = new THREE.Object3D();
 
     var geometry = new THREE.CircleGeometry( 0.3, 32 );
-    var material = new THREE.MeshBasicMaterial( { color: 0x000000 } );
-    markerMesh = new THREE.Mesh( geometry, material );
+    markerMesh = new THREE.Mesh( geometry, markerBorderMaterial );
+    markerMesh.meshType = 'border';
+    markerMesh.markerName = key;
     markerContainer.add(markerMesh);
 
     var geometry = new THREE.CircleGeometry( 0.2, 32 );
-    var material = new THREE.MeshBasicMaterial( { color: 0xffffff } );
-    markerMesh = new THREE.Mesh( geometry, material );
+    markerMesh = new THREE.Mesh( geometry, markerInteriorMaterialDefault );
+    markerMesh.meshType = 'innercircle';
+    markerMesh.markerName = key;
     markerContainer.add(markerMesh);
 
     markerContainer.position.set(marker.position[0], marker.position[1],marker.position[2]);
-    markerContainer.targetName = marker.name;
 
     markers.push(markerContainer);
-    scene.add( markerContainer );
+    markersContainer.add( markerContainer );
   });
 }
 
@@ -156,12 +173,54 @@ function onWindowResize( event ) {
 }
 
 
+// raycasting
+function onMouseMove( event ) {
+	mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+  mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+  // rollovers
+  raycaster.setFromCamera( mouse, camera );
+  let intersects = raycaster.intersectObjects( scene.children, true );
+  let currentMarker = null;
+  if(intersects.length){
+    if(intersects[0].object.meshType){
+      currentMarker = intersects[0].object.markerName;
+      if(intersects[0].object.meshType == 'innercircle'){
+        intersects[0].object.material = markerInteriorMaterialHover;
+      }
+    }
+  }
+
+  markers.forEach(function (markerParent) {
+    markerParent.children.forEach(function (marker) {
+      if(marker.meshType == 'innercircle' && marker.markerName != currentMarker){
+        marker.material = markerInteriorMaterialDefault;
+      }
+    });
+  });
+  if(currentMarker){
+    canvas.classList.add('marker-hover');
+  }else{
+    canvas.classList.remove('marker-hover');
+  }
+}
+
+function onCanvasClick(){
+	raycaster.setFromCamera( mouse, camera );
+	let intersects = raycaster.intersectObjects( scene.children, true );
+  if(intersects.length){
+    if(intersects[0].object.markerName){
+      let markerName = intersects[0].object.markerName;
+      console.log(markerData[markerName].description);
+    }
+  }
+}
+
 function animate() {
   requestAnimationFrame(animate);
   controls.update();
   renderer.render(scene, camera);
 }
-
 
 
 init(); // light this candle

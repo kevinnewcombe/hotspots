@@ -14,8 +14,10 @@ canvas{
   cursor:-webkit-grab; 
   cursor:-moz-grab;
 }
-
-canvas:active{
+canvas.marker-hover{
+  cursor:pointer;
+}
+canvas.not(.marker-hover):active{
   cursor:grabbing;
   cursor:-webkit-grabbing; 
   cursor:-moz-grabbing;
