@@ -8,3 +8,15 @@ html, body{
 *, *:before, *:after {
   box-sizing: border-box;
 }
+
+canvas{
+  cursor:grab;
+  cursor:-webkit-grab; 
+  cursor:-moz-grab;
+}
+
+canvas:active{
+  cursor:grabbing;
+  cursor:-webkit-grabbing; 
+  cursor:-moz-grabbing;
+}

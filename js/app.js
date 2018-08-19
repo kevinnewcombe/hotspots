@@ -3,7 +3,7 @@ var renderer, camera;
 var width, height, aspectRatio, loader, textures, controls;
 
 // lights
-var frontLight, leftLight, rightLight;
+var frontLight, backLight, topLight;
 
 var sceneContainer = new THREE.Object3D();
 var cubeContainer = new THREE.Object3D();
@@ -23,22 +23,31 @@ function init() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   document.body.appendChild(renderer.domElement);
   window.addEventListener( 'resize', onWindowResize, false );
-
+  
+  addLights();
+ 
   // camera
   camera = new THREE.PerspectiveCamera(10, aspectRatio, 0.1, 200000);
   camera.position.set(0, 0, 100 );
   scene.add(camera);
   camera.lookAt(new THREE.Vector3(0,0,0));
   controls = new THREE.OrbitControls(camera, renderer.domElement);
-
-  addLights();
-
+  controls.minPolarAngle = controls.maxPolarAngle = Math.PI/2;
+ 
   loadGeometry();
 }
 
-
+function light_update(){
+  frontLight.position.copy( camera.position );
+  console.clear();
+  console.log(camera.position);
+  console.log(frontLight.position);
+}
 function addLights(){
+   
   frontLight = new THREE.SpotLight(0xffffff);
+  backLight = new THREE.SpotLight(0xffffff);
+  topLight = new THREE.SpotLight(0xffffff);
   
   const lights = [
     {
@@ -46,19 +55,39 @@ function addLights(){
       x : 10,
       y : 10,
       z : 450,
-      intensity :0.2
+      intensity : 0.2
+    },
+    {
+      light : backLight,
+      x : 10,
+      y : 10,
+      z : -450,
+      intensity : 0.2
+    },
+    {
+      light : topLight,
+      x : 10,
+      y : 450,
+      z : 10,
+      intensity : 0.2
     }
   ];
 
 
-  lights.forEach(function (lightObj) {
-    light = lightObj.light;
-    light.intensity = lightObj.intensity
-    light.position.set(lightObj.x,lightObj.y,lightObj.z);
-    light.castShadow = true;   
-    scene.add( light );
-  });
+  // lights.forEach(function (lightObj) {
+  //   light = lightObj.light;
+  //   light.intensity = lightObj.intensity
+  //   light.position.set(lightObj.x,lightObj.y,lightObj.z);
+  //   light.castShadow = true;   
+  //   scene.add( light );
 
+  //   var helper = new THREE.DirectionalLightHelper( light, 5 );
+  //   scene.add( helper );
+  // });
+  
+  var light = new THREE.HemisphereLight( 0xffffff, 0x333333, 1.2 );
+  // light.position.set(10,10,450);
+  scene.add( light );
 }
 
 function loadGeometry(){
@@ -102,11 +131,11 @@ function loadGeometry(){
 
 
 function onWindowResize( event ) {
-  width = window.innerHeight;
-  height  = window.innerWidth;
+  width = window.innerWidth;
+  height  = window.innerHeight;
+  aspectRatio = width / height;
   renderer.setSize( width, height );
-  camera.aspect = width / height;
-
+  camera.aspect = aspectRatio;
   camera.updateProjectionMatrix();
 }
 
