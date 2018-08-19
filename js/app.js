@@ -2,10 +2,14 @@
 var scene = new THREE.Scene();
 var renderer, camera;
 var controls, canvas;
+var pixelRatio = 1.5;
+var screenWidth, screenHeight;
 
 // geometry
 var assetsDir = 'source/models/strat/';
 var assetsName = 'fender_guitar_mod';
+// var assetsDir = 'assets/';
+// var assetsName = 'guitar';
 THREE.ImageUtils.crossOrigin = "";
 
 // markers
@@ -18,8 +22,10 @@ const markerData = {
   }
 };
 const markerBorderMaterial = new THREE.MeshBasicMaterial( { color: 0x000000 } );
-const markerInteriorMaterialDefault = new THREE.MeshBasicMaterial( { color: 0xffffff } );
-const markerInteriorMaterialHover = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
+const markerInteriorMaterialDefault = new THREE.MeshBasicMaterial( { color: 0x666666 } );
+const markerInteriorMaterialHover = new THREE.MeshBasicMaterial( { color: 0xd52b1e } );
+const tooltipContainer = document.getElementById('tooltip');
+let activeMarker = null;
 
 const markers = [];
 
@@ -29,11 +35,11 @@ var mouse = new THREE.Vector2();
 
 
 function init() {
-  width = window.innerWidth, height = window.innerHeight, aspectRatio = width/height;
+  screenWidth = window.innerWidth, screenHeight = window.innerHeight, aspectRatio = screenWidth/screenHeight;
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(width, height);
-  renderer.setPixelRatio(1.5);
+  renderer.setSize(screenWidth, screenHeight);
+  renderer.setPixelRatio(pixelRatio);
   renderer.setClearColor(0xffffff);
   renderer.shadowMap.enabled = true; 
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -63,7 +69,7 @@ function init() {
 
 
 function addLights(){
-  var light = new THREE.HemisphereLight( 0xffffff, 0x333333, 1.2 );
+  var light = new THREE.HemisphereLight( 0xffffff, 0x333333, 1 );
   scene.add( light );
 }
 
@@ -72,10 +78,8 @@ function loadGuitar(){
   var texture = new THREE.Texture();
   var lastPercent = 0;
   var onProgress = function ( xhr ) {
-    console.clear();
     if ( xhr.lengthComputable ) {
       var percentComplete = Math.round(xhr.loaded / xhr.total * 100);
-      console.log(percentComplete);
       if(xhr.loaded == xhr.total){
         console.log('loading finished!');
       }
@@ -117,7 +121,7 @@ function loadMarkerHelper(){
   };
   
   var geometry = new THREE.CircleGeometry( 0.2, 32 );
-  var material = new THREE.MeshBasicMaterial( { color: 0xffff00 } );
+  var material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
   markerHelper = new THREE.Mesh( geometry, material );
   markerHelper.position.set(0,0,0.9);
   scene.add( markerHelper );
@@ -137,11 +141,11 @@ function loadMarkers(){
     marker = markerData[key];
     var markerContainer = new THREE.Object3D();
 
-    var geometry = new THREE.CircleGeometry( 0.3, 32 );
-    markerMesh = new THREE.Mesh( geometry, markerBorderMaterial );
-    markerMesh.meshType = 'border';
-    markerMesh.markerName = key;
-    markerContainer.add(markerMesh);
+    // var geometry = new THREE.CircleGeometry( 0.3, 32 );
+    // markerMesh = new THREE.Mesh( geometry, markerBorderMaterial );
+    // markerMesh.meshType = 'border';
+    // markerMesh.markerName = key;
+    // markerContainer.add(markerMesh);
 
     var geometry = new THREE.CircleGeometry( 0.2, 32 );
     markerMesh = new THREE.Mesh( geometry, markerInteriorMaterialDefault );
@@ -162,22 +166,26 @@ function onCameraUpdate(){
   markers.forEach(function (marker) {
     marker.rotation.set(0, cameraAngle, 0);
   });
-}
-function onWindowResize( event ) {
-  width = window.innerWidth;
-  height  = window.innerHeight;
-  aspectRatio = width / height;
-  renderer.setSize( width, height );
-  camera.aspect = aspectRatio;
-  camera.updateProjectionMatrix();
+  if(activeMarker){
+    positionMarker();
+  }
 }
 
+function positionMarker(){
+  let position = toScreenPosition(activeMarker, camera);
+  if((position.x + tooltipContainer.offsetWidth) < screenWidth){
+    tooltipContainer.style.left = (position.x)+'px';
+  }else{
+    tooltipContainer.style.left = (screenWidth - tooltipContainer.offsetWidth)+'px';
+  }
+  tooltipContainer.style.top = (position.y)+'px';
+}
 
 // raycasting
 function onMouseMove( event ) {
 	mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
   mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
-
+  
   // rollovers
   raycaster.setFromCamera( mouse, camera );
   let intersects = raycaster.intersectObjects( scene.children, true );
@@ -205,15 +213,56 @@ function onMouseMove( event ) {
   }
 }
 
+function toScreenPosition(obj, camera){
+  var vector = new THREE.Vector3();
+
+  var widthHalf = 0.5*renderer.context.canvas.width;
+  var heightHalf = 0.5*renderer.context.canvas.height;
+
+  obj.updateMatrixWorld();
+  vector.setFromMatrixPosition(obj.matrixWorld);
+  vector.project(camera);
+
+  vector.x = ( vector.x * widthHalf ) + widthHalf;
+  vector.y = - ( vector.y * heightHalf ) + heightHalf;
+
+  return { 
+      x: vector.x / pixelRatio,
+      y: vector.y / pixelRatio
+  };
+};
+
 function onCanvasClick(){
 	raycaster.setFromCamera( mouse, camera );
-	let intersects = raycaster.intersectObjects( scene.children, true );
+  let intersects = raycaster.intersectObjects( scene.children, true );
+  let marker = null;
+  let markerName = null;
   if(intersects.length){
     if(intersects[0].object.markerName){
-      let markerName = intersects[0].object.markerName;
-      console.log(markerData[markerName].description);
+      marker = intersects[0].object;
+      markerName = marker.markerName;
+      tooltipContainer.innerHTML = markerData[markerName].description;
     }
   }
+  if(markerName){
+    activeMarker = marker;
+    tooltipContainer.classList.add('is-visible');
+    positionMarker();
+  }else{
+    // tooltipContainer.classList.remove('is-visible');
+  }
+}
+
+function onWindowResize( event ) {
+  if(activeMarker){
+    positionMarker();
+  }
+  screenWidth = window.innerWidth;
+  screenHeight  = window.innerHeight;
+  aspectRatio = screenWidth / screenHeight;
+  renderer.setSize( screenWidth, screenHeight );
+  camera.aspect = aspectRatio;
+  camera.updateProjectionMatrix();
 }
 
 function animate() {
@@ -221,6 +270,5 @@ function animate() {
   controls.update();
   renderer.render(scene, camera);
 }
-
 
 init(); // light this candle
