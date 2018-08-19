@@ -33,8 +33,8 @@ const markerData = {
   }
 };
 const markerBorderMaterial = new THREE.MeshBasicMaterial( { color: 0x000000 } );
-const markerInteriorMaterialDefault = new THREE.MeshBasicMaterial( { color: 0xffffff } );
-const markerInteriorMaterialHover = new THREE.MeshBasicMaterial( { color: 0xd52b1e } );
+let markerInteriorMaterialDefault = new THREE.MeshBasicMaterial( { color: 0xffffff, transparent:true, opacity:0.3} );
+let markerInteriorMaterialHover = new THREE.MeshBasicMaterial( { color: 0xffffff } );
 const tooltipContainer = document.getElementById('tooltip');
 let activeMarker = null;
 
@@ -51,7 +51,7 @@ function init() {
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(screenWidth, screenHeight);
   renderer.setPixelRatio(pixelRatio);
-  renderer.setClearColor(0xffffff);
+  renderer.setClearColor(0xada594);
   renderer.shadowMap.enabled = true; 
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   document.body.appendChild(renderer.domElement);
@@ -73,7 +73,7 @@ function init() {
   canvas.addEventListener('click', onCanvasClick);
 
   loadMarkers();
-  loadMarkerHelper();
+  // loadMarkerHelper();
   loadGuitar();
   animate();
 }
@@ -108,10 +108,6 @@ function addLights(){
     light.castShadow = true;   
     scene.add( light );
   });
-    
-
-  // var light = new THREE.HemisphereLight( 0xffffff, 0x333333, 1 );
-  // scene.add( light );
 }
 
 function loadGuitar(){
@@ -182,17 +178,25 @@ function loadMarkers(){
     marker = markerData[key];
     var markerContainer = new THREE.Object3D();
 
-    // var geometry = new THREE.CircleGeometry( 0.3, 32 );
+    var geometry = new THREE.CircleGeometry( 0.3, 32 );
     // markerMesh = new THREE.Mesh( geometry, markerBorderMaterial );
     // markerMesh.meshType = 'border';
     // markerMesh.markerName = key;
     // markerContainer.add(markerMesh);
 
-    var geometry = new THREE.CircleGeometry( 0.5, 32 );
+    // var geometry = new THREE.CircleGeometry( 0.5, 32 );
     markerMesh = new THREE.Mesh( geometry, markerInteriorMaterialDefault );
-    markerMesh.meshType = 'innercircle';
+    //markerMesh.meshType = 'innercircle';
     markerMesh.markerName = key;
     markerContainer.add(markerMesh);
+
+    var edges = new THREE.EdgesGeometry( geometry );
+    var line = new THREE.LineSegments( edges, new THREE.LineBasicMaterial({ color: 0xffffff }));
+    line.markerName = key;
+    line.meshType = 'innercircle';
+    
+    markerContainer.add( line );
+
 
     markerContainer.position.set(marker.position[0], marker.position[1],marker.position[2]);
 
@@ -237,7 +241,15 @@ function onMouseMove( event ) {
     if(intersects[0].object.meshType){
       currentMarker = intersects[0].object.markerName;
       if(intersects[0].object.meshType == 'innercircle'){
-        intersects[0].object.material = markerInteriorMaterialHover;
+        // intersects[0].object.material = markerInteriorMaterialHover;
+
+        // todo: tween the hover
+        /* 
+        TweenLite.to(intersects[0].object.material, 0.125, { 
+          opacity : 1, 
+          ease: Power1.easeInOut
+        });
+        */
       }
     }
   }
@@ -245,7 +257,11 @@ function onMouseMove( event ) {
   markers.forEach(function (markerParent) {
     markerParent.children.forEach(function (marker) {
       if(marker.meshType == 'innercircle' && marker.markerName != currentMarker){
-        marker.material = markerInteriorMaterialDefault;
+        // TweenLite.to(marker.material, 0.125, { 
+        //   opacity : 0.5, 
+        //   ease: Power1.easeInOut
+        // });
+        // marker.material = markerInteriorMaterialDefault;
       }
     });
   });
@@ -270,8 +286,8 @@ function toScreenPosition(obj, camera){
   vector.y = - ( vector.y * heightHalf ) + heightHalf;
 
   return { 
-      x: vector.x / pixelRatio,
-      y: vector.y / pixelRatio,
+    x: vector.x / pixelRatio,
+    y: vector.y / pixelRatio
   };
 };
 
@@ -292,6 +308,7 @@ function onCanvasClick(){
     tooltipContainer.classList.add('is-visible');
     positionMarker();
   }else{
+    activeMarker = null;
     tooltipContainer.classList.remove('is-visible');
   }
 }

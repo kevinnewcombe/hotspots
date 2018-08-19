@@ -16,6 +16,7 @@
   <div id="tooltip"></div>
 
   <script type="text/javascript" src="js/dat.gui.min.js"></script>
+  <script type="text/javascript" src="js/TweenMax.min.js"></script>
   <script type="text/javascript" src="js/three/three.min.js"></script>
   <script type="text/javascript" src="js/three/OBJLoader.js"></script>
   <script type="text/javascript" src="js/three/MTLLoader.js"></script>
