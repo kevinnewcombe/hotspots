@@ -11,6 +11,8 @@ var modelName = 'guitar_mod';
 var mtlName = 'guitar';
 THREE.ImageUtils.crossOrigin = "";
 
+var plane;
+
 // markers
 let markerHelper;
 const markersContainer = new THREE.Object3D();
@@ -33,7 +35,6 @@ const markerData = {
   }
 };
 const markerBorderMaterial = new THREE.MeshBasicMaterial( { color: 0x000000 } );
-let markerInteriorMaterialDefault = new THREE.MeshBasicMaterial( { color: 0xffffff, transparent:true, opacity:0.3} );
 let markerInteriorMaterialHover = new THREE.MeshBasicMaterial( { color: 0xffffff } );
 const tooltipContainer = document.getElementById('tooltip');
 let activeMarker = null;
@@ -51,7 +52,8 @@ function init() {
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(screenWidth, screenHeight);
   renderer.setPixelRatio(pixelRatio);
-  renderer.setClearColor(0xada594);
+  //renderer.setClearColor(0xada594);
+  renderer.setClearColor(0xffffff);
   renderer.shadowMap.enabled = true; 
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   document.body.appendChild(renderer.domElement);
@@ -72,8 +74,46 @@ function init() {
   canvas = canvas[0];
   canvas.addEventListener('click', onCanvasClick);
 
+
+  // instantiate a loader
+  var loader = new THREE.TextureLoader();
+
+  // load a resource
+  loader.load(
+    'assets/shadow.jpg',
+
+    // onLoad callback
+    function ( texture ) {
+      // in this example we create the material when the texture is loaded
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set( 1, 1 );
+      // var material = new THREE.MeshBasicMaterial( {
+      //   map: texture
+      // });
+      var material = new THREE.MeshBasicMaterial( {color: 0xffffff, side: THREE.DoubleSide} );
+      var geometry = new THREE.BoxGeometry(100, 50, 1);
+      plane = new THREE.Mesh( geometry, material );
+      plane.receiveShadow = true;
+      plane.position.y = -10;
+      plane.rotation.set(THREE.Math.degToRad(90), 0, 0 );
+      scene.add( plane );
+    },
+
+    // onProgress callback currently not supported
+    undefined,
+
+    // onError callback
+    function ( err ) {
+      console.error( 'An error happened.' );
+    }
+  );
+
+ 
+ 
+
   loadMarkers();
-  // loadMarkerHelper();
+  loadMarkerHelper();
   loadGuitar();
   animate();
 }
@@ -82,21 +122,31 @@ function init() {
 function addLights(){
   frontLight = new THREE.SpotLight(0xffffff);
   backLight = new THREE.SpotLight(0xffffff);
+  topLight = new THREE.SpotLight(0xffffff);
   
   const lights = [
     {
       light : frontLight,
       x : 0,
-      y : 0,
+      y : 10,
       z : 450,
       intensity :0.5
-    },
+    }
+    // ,
+    // {
+    //   light : topLight,
+    //   x : 0,
+    //   y : 100,
+    //   z : 0,
+    //   intensity: 0.5
+    // }
+    ,
     {
       light : backLight,
       x : 0,
-      y : 0,
+      y : 10,
       z : -450,
-      intensity :0.5
+      intensity :0.25
     }
   ];
 
@@ -107,6 +157,9 @@ function addLights(){
     light.position.set(lightObj.x,lightObj.y,lightObj.z);
     light.castShadow = true;   
     scene.add( light );
+
+    // var spotLightHelper = new THREE.SpotLightHelper( light );
+    // scene.add( spotLightHelper );
   });
 }
 
@@ -137,13 +190,15 @@ function loadGuitar(){
       object.rotation.set(0, 0, 0 );
       object.traverse(function (child) {
         if (child instanceof THREE.Mesh) {
-          child.castShadow = true;
+          child.castShadow = false;
           child.receiveShadow = false;
         }
       });
       scene.add(object);
     }, onProgress);
   });
+
+
 }
 
 function loadMarkerHelper(){
@@ -169,6 +224,7 @@ function loadMarkerHelper(){
   markerGUI.add(markerHelper.position, 'y', -10, 10).step(0.01).listen();
   markerGUI.add(markerHelper.position, 'z', -5, 5).step(0.1).listen();
   markerGUI.add(options, 'copyPosition');
+
   markerGUI.open();
 }
 
@@ -185,17 +241,18 @@ function loadMarkers(){
     // markerContainer.add(markerMesh);
 
     // var geometry = new THREE.CircleGeometry( 0.5, 32 );
+    let markerInteriorMaterialDefault = new THREE.MeshBasicMaterial( { color: 0xffffff, transparent:true, opacity:0.5} );
     markerMesh = new THREE.Mesh( geometry, markerInteriorMaterialDefault );
-    //markerMesh.meshType = 'innercircle';
+    markerMesh.meshType = 'innercircle';
     markerMesh.markerName = key;
     markerContainer.add(markerMesh);
 
-    var edges = new THREE.EdgesGeometry( geometry );
-    var line = new THREE.LineSegments( edges, new THREE.LineBasicMaterial({ color: 0xffffff }));
-    line.markerName = key;
-    line.meshType = 'innercircle';
+    // var edges = new THREE.EdgesGeometry( geometry );
+    // var line = new THREE.LineSegments( edges, new THREE.LineBasicMaterial({ color: 0xffffff }));
+    // line.markerName = key;
+    // line.meshType = 'innercircle';
     
-    markerContainer.add( line );
+    // markerContainer.add( line );
 
 
     markerContainer.position.set(marker.position[0], marker.position[1],marker.position[2]);
@@ -244,12 +301,12 @@ function onMouseMove( event ) {
         // intersects[0].object.material = markerInteriorMaterialHover;
 
         // todo: tween the hover
-        /* 
+     
         TweenLite.to(intersects[0].object.material, 0.125, { 
           opacity : 1, 
           ease: Power1.easeInOut
         });
-        */
+        
       }
     }
   }
@@ -257,10 +314,10 @@ function onMouseMove( event ) {
   markers.forEach(function (markerParent) {
     markerParent.children.forEach(function (marker) {
       if(marker.meshType == 'innercircle' && marker.markerName != currentMarker){
-        // TweenLite.to(marker.material, 0.125, { 
-        //   opacity : 0.5, 
-        //   ease: Power1.easeInOut
-        // });
+        TweenLite.to(marker.material, 0.125, { 
+          opacity : 0.5, 
+          ease: Power1.easeInOut
+        });
         // marker.material = markerInteriorMaterialDefault;
       }
     });
