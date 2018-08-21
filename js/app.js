@@ -74,25 +74,21 @@ function init() {
   canvas = canvas[0];
   canvas.addEventListener('click', onCanvasClick);
 
-
-  // instantiate a loader
+  // load the ground shadow onto a plane
   var loader = new THREE.TextureLoader();
-
-  // load a resource
   loader.load(
-    'assets/shadow.jpg',
-
+    'assets/shadow.jpg?v=2',
     // onLoad callback
     function ( texture ) {
-      // in this example we create the material when the texture is loaded
-      texture.wrapS = THREE.RepeatWrapping;
-      texture.wrapT = THREE.RepeatWrapping;
-      texture.repeat.set( 1, 1 );
-      // var material = new THREE.MeshBasicMaterial( {
-      //   map: texture
-      // });
-      var material = new THREE.MeshBasicMaterial( {color: 0xffffff, side: THREE.DoubleSide} );
-      var geometry = new THREE.BoxGeometry(100, 50, 1);
+      texture.repeat.set(1,1);
+
+      var material = new THREE.MeshBasicMaterial( {
+        map: texture,
+        side : THREE.DoubleSide,
+        color: 0xffffff
+      });
+      // var material = new THREE.MeshBasicMaterial( {color: 0xffffff, side: THREE.DoubleSide} );
+      var geometry = new THREE.PlaneGeometry(80, 50, 1);
       plane = new THREE.Mesh( geometry, material );
       plane.receiveShadow = true;
       plane.position.y = -10;
@@ -109,8 +105,6 @@ function init() {
     }
   );
 
- 
- 
 
   loadMarkers();
   loadMarkerHelper();
@@ -190,8 +184,8 @@ function loadGuitar(){
       object.rotation.set(0, 0, 0 );
       object.traverse(function (child) {
         if (child instanceof THREE.Mesh) {
-          child.castShadow = false;
-          child.receiveShadow = false;
+          child.castShadow = true;
+          child.receiveShadow = true;
         }
       });
       scene.add(object);
