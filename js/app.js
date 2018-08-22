@@ -1,23 +1,35 @@
 // base
-var scene = new THREE.Scene();
-var renderer, camera;
-var controls, canvas;
-var pixelRatio = 1.5;
-var screenWidth, screenHeight;
+let scene = new THREE.Scene();
+let renderer, camera;
+let controls, canvas;
+let pixelRatio = 1.5;
+let screenWidth, screenHeight;
+
+let useDynamicShadows = true;
 
 // geometry
-var assetsDir = 'assets/';
-var modelName = 'guitar_mod';
-var mtlName = 'guitar';
+let assetsDir = 'assets/';
+let modelName = 'guitar_mod';
+let mtlName = 'guitar';
 THREE.ImageUtils.crossOrigin = "";
 
+let orientationVars = {
+  'landscape': {
+    'ground_y': -10,
+    'world_angle': 0
+  },
+  'portrait': {
+    'ground_y': -26,
+    'world_angle': 90.3
+  }
+}
+let orientation = null;
 var plane;
 
 // markers
 let markerHelper;
-const markersContainer = new THREE.Object3D();
+const geometryContainer = new THREE.Object3D();
 const markerData = {
-
   'tailpiece' : {
     position : [-15.8,0,1.4],
     headline : 'Tailpiece',
@@ -34,8 +46,7 @@ const markerData = {
     description : '68 Custom Humbucker'
   }
 };
-const markerBorderMaterial = new THREE.MeshBasicMaterial( { color: 0x000000 } );
-let markerInteriorMaterialHover = new THREE.MeshBasicMaterial( { color: 0xffffff } );
+
 const tooltipContainer = document.getElementById('tooltip');
 let activeMarker = null;
 
@@ -45,11 +56,19 @@ const markers = [];
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
 
-let useDynamicShadows = true;
 
 
 function init() {
+  scene.add(geometryContainer);
+
   screenWidth = window.innerWidth, screenHeight = window.innerHeight, aspectRatio = screenWidth/screenHeight;
+  if(screenWidth < screenHeight){
+    orientation = 'portrait';
+    geometryContainer.rotation.set(0, 0, THREE.Math.degToRad(orientationVars[orientation].world_angle));
+  }else{
+    orientation = 'landscape';
+  }
+
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(screenWidth, screenHeight);
@@ -60,7 +79,6 @@ function init() {
   document.body.appendChild(renderer.domElement);
   window.addEventListener( 'resize', onWindowResize, false );
   window.addEventListener( 'mousemove', onMouseMove, false );
-  
   addLights();
  
   // camera
@@ -80,10 +98,8 @@ function init() {
     var loader = new THREE.TextureLoader();
     loader.load(
       'assets/shadow.jpg?v=2',
-      // onLoad callback
       function ( texture ) {
         texture.repeat.set(1,1);
-
         var material = new THREE.MeshBasicMaterial( {
           map: texture,
           side : THREE.DoubleSide,
@@ -92,7 +108,7 @@ function init() {
         var geometry = new THREE.PlaneGeometry(70, 50, 1);
         plane = new THREE.Mesh( geometry, material );
         plane.receiveShadow = true;
-        plane.position.y = -10;
+        plane.position.y = orientationVars[orientation].ground_y;
         plane.rotation.set(THREE.Math.degToRad(90), 0, 0 );
         scene.add( plane );
       },
@@ -115,7 +131,7 @@ function init() {
     plane = new THREE.Mesh( geometry, material );
     plane.receiveShadow = true;
     plane.rotation.set(THREE.Math.degToRad(90), 0, 0 );
-    plane.position.y = -10;
+    plane.position.y = orientationVars[orientation].ground_y;
     scene.add( plane );
   }
 
@@ -186,7 +202,6 @@ function loadGuitar(){
   mtlLoader.crossOrigin = '';
   mtlLoader.load( mtlName+'.mtl', function( materials ) {
     materials.preload();
-
     var objLoader = new THREE.OBJLoader();
     objLoader.setMaterials( materials );
     objLoader.setPath( assetsDir );
@@ -197,7 +212,7 @@ function loadGuitar(){
           child.castShadow = true;
         }
       });
-      scene.add(object);
+      geometryContainer.add(object);
     }, onProgress);
   });
 
@@ -232,7 +247,6 @@ function loadMarkerHelper(){
 }
 
 function loadMarkers(){
-  scene.add(markersContainer);
   Object.keys(markerData).forEach(function(key) {
     marker = markerData[key];
     var markerContainer = new THREE.Object3D();
@@ -252,7 +266,7 @@ function loadMarkers(){
     markerContainer.position.set(marker.position[0], marker.position[1],marker.position[2]);
 
     markers.push(markerContainer);
-    markersContainer.add( markerContainer );
+    geometryContainer.add( markerContainer );
   });
 }
 
@@ -365,6 +379,24 @@ function onWindowResize( event ) {
   screenWidth = window.innerWidth;
   screenHeight  = window.innerHeight;
   aspectRatio = screenWidth / screenHeight;
+
+  // change orientation if required
+  if((orientation == 'landscape' && aspectRatio < 1) || (orientation == 'portrait' && aspectRatio >= 1)){
+    if(orientation == 'landscape' && aspectRatio < 1){
+      orientation = 'portrait';
+    }else{
+      orientation = 'landscape';
+    }
+    TweenLite.to(geometryContainer.rotation, 0.25, { 
+      z : THREE.Math.degToRad(orientationVars[orientation].world_angle), 
+      ease: Power1.easeInOut
+    });
+    TweenLite.to(plane.position, 0.25, { 
+      y : orientationVars[orientation].ground_y, 
+      ease: Power1.easeInOut
+    });
+  }
+ 
   renderer.setSize( screenWidth, screenHeight );
   camera.aspect = aspectRatio;
   camera.updateProjectionMatrix();
