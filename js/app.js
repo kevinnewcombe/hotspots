@@ -45,6 +45,8 @@ const markers = [];
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
 
+let useDynamicShadows = true;
+
 
 function init() {
   screenWidth = window.innerWidth, screenHeight = window.innerHeight, aspectRatio = screenWidth/screenHeight;
@@ -52,7 +54,6 @@ function init() {
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(screenWidth, screenHeight);
   renderer.setPixelRatio(pixelRatio);
-  //renderer.setClearColor(0xada594);
   renderer.setClearColor(0xffffff);
   renderer.shadowMap.enabled = true; 
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -74,37 +75,49 @@ function init() {
   canvas = canvas[0];
   canvas.addEventListener('click', onCanvasClick);
 
-  // load the ground shadow onto a plane
-  var loader = new THREE.TextureLoader();
-  loader.load(
-    'assets/shadow.jpg?v=2',
-    // onLoad callback
-    function ( texture ) {
-      texture.repeat.set(1,1);
+  if(!useDynamicShadows){
+    // load the ground shadow onto a plane
+    var loader = new THREE.TextureLoader();
+    loader.load(
+      'assets/shadow.jpg?v=2',
+      // onLoad callback
+      function ( texture ) {
+        texture.repeat.set(1,1);
 
-      var material = new THREE.MeshBasicMaterial( {
-        map: texture,
-        side : THREE.DoubleSide,
-        color: 0xffffff
-      });
-      // var material = new THREE.MeshBasicMaterial( {color: 0xffffff, side: THREE.DoubleSide} );
-      var geometry = new THREE.PlaneGeometry(80, 50, 1);
-      plane = new THREE.Mesh( geometry, material );
-      plane.receiveShadow = true;
-      plane.position.y = -10;
-      plane.rotation.set(THREE.Math.degToRad(90), 0, 0 );
-      scene.add( plane );
-    },
+        var material = new THREE.MeshBasicMaterial( {
+          map: texture,
+          side : THREE.DoubleSide,
+          color: 0xffffff,
+        });
+        var geometry = new THREE.PlaneGeometry(70, 50, 1);
+        plane = new THREE.Mesh( geometry, material );
+        plane.receiveShadow = true;
+        plane.position.y = -10;
+        plane.rotation.set(THREE.Math.degToRad(90), 0, 0 );
+        scene.add( plane );
+      },
 
-    // onProgress callback currently not supported
-    undefined,
+      // onProgress callback currently not supported
+      undefined,
 
-    // onError callback
-    function ( err ) {
-      console.error( 'An error happened.' );
-    }
-  );
-
+      // onError callback
+      function ( err ) {
+        console.error( 'An error happened.' );
+      }
+    );
+  }else{
+    var material = new THREE.MeshPhongMaterial({
+      color: 0xffffff, 
+      side: THREE.DoubleSide,
+      emissive: 0xaaaaaa
+    });
+    var geometry = new THREE.PlaneGeometry(70, 50, 1);
+    plane = new THREE.Mesh( geometry, material );
+    plane.receiveShadow = true;
+    plane.rotation.set(THREE.Math.degToRad(90), 0, 0 );
+    plane.position.y = -10;
+    scene.add( plane );
+  }
 
   loadMarkers();
   loadMarkerHelper();
@@ -126,14 +139,14 @@ function addLights(){
       z : 450,
       intensity :0.5
     }
-    // ,
-    // {
-    //   light : topLight,
-    //   x : 0,
-    //   y : 100,
-    //   z : 0,
-    //   intensity: 0.5
-    // }
+    ,
+    {
+      light : topLight,
+      x : 0,
+      y : 50,
+      z : 0,
+      intensity: 0.5
+    }
     ,
     {
       light : backLight,
@@ -151,9 +164,6 @@ function addLights(){
     light.position.set(lightObj.x,lightObj.y,lightObj.z);
     light.castShadow = true;   
     scene.add( light );
-
-    // var spotLightHelper = new THREE.SpotLightHelper( light );
-    // scene.add( spotLightHelper );
   });
 }
 
@@ -183,9 +193,8 @@ function loadGuitar(){
     objLoader.load( modelName+'.obj', function ( object ) {
       object.rotation.set(0, 0, 0 );
       object.traverse(function (child) {
-        if (child instanceof THREE.Mesh) {
+        if (child instanceof THREE.Mesh && useDynamicShadows) {
           child.castShadow = true;
-          child.receiveShadow = true;
         }
       });
       scene.add(object);
@@ -228,26 +237,17 @@ function loadMarkers(){
     marker = markerData[key];
     var markerContainer = new THREE.Object3D();
 
-    var geometry = new THREE.CircleGeometry( 0.3, 32 );
-    // markerMesh = new THREE.Mesh( geometry, markerBorderMaterial );
-    // markerMesh.meshType = 'border';
-    // markerMesh.markerName = key;
-    // markerContainer.add(markerMesh);
+    var geometry = new THREE.TorusGeometry( 0.35, 0.05, 2, 100 );
+    var material = new THREE.MeshBasicMaterial({ color: 0xeeeeee });
+    var torus = new THREE.Mesh( geometry, material );
+    markerContainer.add( torus );
 
-    // var geometry = new THREE.CircleGeometry( 0.5, 32 );
-    let markerInteriorMaterialDefault = new THREE.MeshBasicMaterial( { color: 0xffffff, transparent:true, opacity:0.5} );
+    var geometry = new THREE.CircleGeometry( 0.3, 32 );
+    let markerInteriorMaterialDefault = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent:true, opacity:0.2 });
     markerMesh = new THREE.Mesh( geometry, markerInteriorMaterialDefault );
     markerMesh.meshType = 'innercircle';
     markerMesh.markerName = key;
     markerContainer.add(markerMesh);
-
-    // var edges = new THREE.EdgesGeometry( geometry );
-    // var line = new THREE.LineSegments( edges, new THREE.LineBasicMaterial({ color: 0xffffff }));
-    // line.markerName = key;
-    // line.meshType = 'innercircle';
-    
-    // markerContainer.add( line );
-
 
     markerContainer.position.set(marker.position[0], marker.position[1],marker.position[2]);
 
@@ -292,15 +292,10 @@ function onMouseMove( event ) {
     if(intersects[0].object.meshType){
       currentMarker = intersects[0].object.markerName;
       if(intersects[0].object.meshType == 'innercircle'){
-        // intersects[0].object.material = markerInteriorMaterialHover;
-
-        // todo: tween the hover
-     
-        TweenLite.to(intersects[0].object.material, 0.125, { 
+        TweenLite.to(intersects[0].object.material, 0.25, { 
           opacity : 1, 
           ease: Power1.easeInOut
         });
-        
       }
     }
   }
@@ -308,11 +303,10 @@ function onMouseMove( event ) {
   markers.forEach(function (markerParent) {
     markerParent.children.forEach(function (marker) {
       if(marker.meshType == 'innercircle' && marker.markerName != currentMarker){
-        TweenLite.to(marker.material, 0.125, { 
-          opacity : 0.5, 
+        TweenLite.to(marker.material, 0.25, { 
+          opacity : 0.2, 
           ease: Power1.easeInOut
         });
-        // marker.material = markerInteriorMaterialDefault;
       }
     });
   });
