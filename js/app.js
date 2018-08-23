@@ -6,11 +6,13 @@ let pixelRatio = 1.5;
 let screenWidth, screenHeight;
 
 let useDynamicShadows = true;
+let useGuitarModel = false;
 
 // geometry
 let assetsDir = 'assets/';
 let modelName = 'guitar_mod';
 let mtlName = 'guitar';
+let guitarMesh;
 THREE.ImageUtils.crossOrigin = "";
 
 let orientationVars = {
@@ -68,7 +70,6 @@ function init() {
   }else{
     orientation = 'landscape';
   }
-
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(screenWidth, screenHeight);
@@ -137,7 +138,11 @@ function init() {
 
   loadMarkers();
   loadMarkerHelper();
-  loadGuitar();
+  if(useGuitarModel){
+    loadGuitar();
+  }else{
+    loadGuitarPlaceholder();
+  }
   animate();
 }
 
@@ -206,17 +211,29 @@ function loadGuitar(){
     objLoader.setMaterials( materials );
     objLoader.setPath( assetsDir );
     objLoader.load( modelName+'.obj', function ( object ) {
-      object.rotation.set(0, 0, 0 );
-      object.traverse(function (child) {
+      guitarMesh = object;
+      guitarMesh.traverse(function (child) {
         if (child instanceof THREE.Mesh && useDynamicShadows) {
           child.castShadow = true;
         }
       });
-      geometryContainer.add(object);
+      geometryContainer.add(guitarMesh);
+
+      var bbox = new THREE.Box3().setFromObject(guitarMesh);
+      console.log(bbox.min, bbox.max);
+      console.log(Math.abs(bbox.max.x - bbox.min.x)+','+Math.abs(bbox.max.y - bbox.min.y)+','+Math.abs(bbox.max.z - bbox.min.z));
+
+
     }, onProgress);
   });
+}
 
-
+function loadGuitarPlaceholder(){
+  // 17.370596634919863,49.92201164658204,2.7083899974823
+  var geometry = new THREE.BoxGeometry( 49.92201164658204, 17.370596634919863, 2.7083899974823 );
+  var material = new THREE.MeshBasicMaterial({color: 0x000000, wireframe: true});
+  var guitarMesh = new THREE.Mesh( geometry, material );
+  geometryContainer.add( guitarMesh );
 }
 
 function loadMarkerHelper(){
@@ -381,6 +398,7 @@ function onWindowResize( event ) {
   aspectRatio = screenWidth / screenHeight;
 
   // change orientation if required
+  
   if((orientation == 'landscape' && aspectRatio < 1) || (orientation == 'portrait' && aspectRatio >= 1)){
     if(orientation == 'landscape' && aspectRatio < 1){
       orientation = 'portrait';
