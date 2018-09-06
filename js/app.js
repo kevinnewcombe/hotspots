@@ -305,7 +305,11 @@ function onCameraUpdate(){
   // have the markers always face the camera
   let cameraAngle = controls.getAzimuthalAngle();
   markers.forEach(function (marker) {
-    marker.rotation.set(0, cameraAngle, 0);
+    if(orientation == 'landscape'){
+      marker.rotation.set(0, cameraAngle, 0);
+    }else{
+      marker.rotation.set(cameraAngle, 0 , 0);
+    }
   });
   if(activeMarker){
     positionMarker();
@@ -420,6 +424,15 @@ function onWindowResize( event ) {
     }else{
       orientation = 'landscape';
     }
+
+    let cameraAngle = controls.getAzimuthalAngle();
+    markers.forEach(function (marker) {
+      if(orientation == 'landscape'){
+        marker.rotation.set(0, cameraAngle, 0);
+      }else{
+        marker.rotation.set(cameraAngle, 0 , 0);
+      }
+    });
 
 
 
