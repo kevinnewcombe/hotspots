@@ -1,6 +1,6 @@
 // base
 let scene = new THREE.Scene();
-let renderer, camera;
+let renderer, camera, aspectRatio;
 let controls, canvas;
 let pixelRatio = 1.5;
 let screenWidth, screenHeight;
@@ -58,17 +58,24 @@ const markers = [];
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
 
-
+// testing
+var sceneVariables = {}
 
 function init() {
   scene.add(geometryContainer);
 
   screenWidth = window.innerWidth, screenHeight = window.innerHeight, aspectRatio = screenWidth/screenHeight;
+  sceneVariables.aspectRatio = aspectRatio;
   if(screenWidth < screenHeight){
     orientation = 'portrait';
     geometryContainer.rotation.set(0, 0, THREE.Math.degToRad(orientationVars[orientation].world_angle));
   }else{
     orientation = 'landscape';
+  }
+  if(orientation == 'landscape'){
+    sceneVariables.cameraFOV = (aspectRatio / 1.8) * 10;
+  }else{
+    sceneVariables.cameraFOV = 10;
   }
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -236,6 +243,10 @@ function loadGuitarPlaceholder(){
   geometryContainer.add( guitarMesh );
 }
 
+var sceneVariables = {}
+
+
+console.log(sceneVariables);
 function loadMarkerHelper(){
   /*
     For testing only 
@@ -254,11 +265,14 @@ function loadMarkerHelper(){
   scene.add( markerHelper );
   
   var gui = new dat.GUI();
-  var markerGUI = gui.addFolder('Marker');markerGUI
+  // var sceneVars = sceneVariables();
+  var markerGUI = gui.addFolder('Marker')
   markerGUI.add(markerHelper.position, 'x', -30, 30).step(0.01).listen();
   markerGUI.add(markerHelper.position, 'y', -10, 10).step(0.01).listen();
   markerGUI.add(markerHelper.position, 'z', -5, 5).step(0.1).listen();
-  markerGUI.add(options, 'copyPosition');
+  markerGUI.add(markerHelper.position, 'z', -5, 5).step(0.1).listen();
+  markerGUI.add(sceneVariables, 'aspectRatio').step(0.00001).listen();
+  markerGUI.add(sceneVariables, 'cameraFOV').step(0.00001).listen();
 
   markerGUI.open();
 }
@@ -396,15 +410,19 @@ function onWindowResize( event ) {
   screenWidth = window.innerWidth;
   screenHeight  = window.innerHeight;
   aspectRatio = screenWidth / screenHeight;
+  sceneVariables.aspectRatio = aspectRatio;
 
   // change orientation if required
-  
+
   if((orientation == 'landscape' && aspectRatio < 1) || (orientation == 'portrait' && aspectRatio >= 1)){
     if(orientation == 'landscape' && aspectRatio < 1){
       orientation = 'portrait';
     }else{
       orientation = 'landscape';
     }
+
+
+
     TweenLite.to(geometryContainer.rotation, 0.25, { 
       z : THREE.Math.degToRad(orientationVars[orientation].world_angle), 
       ease: Power1.easeInOut
@@ -414,7 +432,19 @@ function onWindowResize( event ) {
       ease: Power1.easeInOut
     });
   }
- 
+  if(orientation == 'landscape'){
+    sceneVariables.cameraFOV = 1 / (aspectRatio / 1.8) * 10;
+    camera.fov = sceneVariables.cameraFOV;
+    camera.updateProjectionMatrix();
+
+    if(aspectRatio < 1.4){
+      // move the camera out
+    }else{
+      // keep the camera at its default distance
+    }
+  }
+
+
   renderer.setSize( screenWidth, screenHeight );
   camera.aspect = aspectRatio;
   camera.updateProjectionMatrix();
