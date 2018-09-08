@@ -9,8 +9,14 @@ let useDynamicShadows = true;
 let useGuitarModel = true;
 
 // geometry
-let assetsDir = 'assets/';
+//let assetsDir = 'assets/';
+let assetsDir = 'https://s3.ca-central-1.amazonaws.com/kevinnewcombe/codepen/guitar/';
 let modelName = 'lespaul';
+
+// preloader
+const preloader = document.getElementById('preloader');
+const dial = document.getElementById('dial');
+
 
 THREE.ImageUtils.crossOrigin = "";
 
@@ -194,16 +200,23 @@ function addLights(){
   });
 }
 
+// preloader
+function updateLoadingProgress(amount){
+ deg = amount*300;
+ dial.style.transform = 'rotate('+deg+'deg)'; 
+}
+
+
 function loadGuitar(){
   var manager = new THREE.LoadingManager();
   var texture = new THREE.Texture();
   var lastPercent = 0;
   var onProgress = function ( xhr ) {
     if ( xhr.lengthComputable ) {
+      updateLoadingProgress(xhr.loaded / xhr.total);
       var percentComplete = Math.round(xhr.loaded / xhr.total * 100);
-      console.log(percentComplete+'%')
       if(xhr.loaded == xhr.total){
-        console.log('loading finished!');
+        preloader.classList.add('is-hidden');
       }
     }
   };
@@ -468,5 +481,7 @@ function animate() {
   controls.update();
   renderer.render(scene, camera);
 }
+
+
 
 init(); // light this candle
