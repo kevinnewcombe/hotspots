@@ -27,7 +27,6 @@ canvas:not(.marker-hover):active{
 #tooltip{
   position:absolute;
   background-color:#fff;
-  /*border-radius:1px;*/
   padding: 0.25rem 0.6rem 0.4rem;
   width:auto;
   max-width:300px;
@@ -54,4 +53,31 @@ h5{
 }
 p{
   font-size:14px;
+}
+
+
+#preloader{
+  width:100%;
+  height:100%;
+  position:absolute;
+  top:0;
+  background-color:#e6bd73;
+  display: flex;
+  align-items: center;
+  transition:1s all;
+  padding:15px;
+  justify-content: center;
+}
+
+#preloader.is-hidden{
+  top:-100vh;
+}
+
+#preloader svg{
+  width:100%;
+  max-width:300px;
+}
+
+#dial{
+  transform-origin:50% 59.8%;
 }
