@@ -6,13 +6,12 @@ let pixelRatio = 1.5;
 let screenWidth, screenHeight;
 
 let useDynamicShadows = true;
-let useGuitarModel = false;
+let useGuitarModel = true;
 
 // geometry
 let assetsDir = 'assets/';
-let modelName = 'guitar_mod';
-let mtlName = 'guitar';
-let guitarMesh;
+let modelName = 'lespaul';
+
 THREE.ImageUtils.crossOrigin = "";
 
 let orientationVars = {
@@ -202,6 +201,7 @@ function loadGuitar(){
   var onProgress = function ( xhr ) {
     if ( xhr.lengthComputable ) {
       var percentComplete = Math.round(xhr.loaded / xhr.total * 100);
+      console.log(percentComplete+'%')
       if(xhr.loaded == xhr.total){
         console.log('loading finished!');
       }
@@ -212,12 +212,12 @@ function loadGuitar(){
   mtlLoader.setMaterialOptions( { side: THREE.DoubleSide } );
   mtlLoader.setPath( assetsDir );
   mtlLoader.crossOrigin = '';
-  mtlLoader.load( mtlName+'.mtl', function( materials ) {
+  mtlLoader.load( 'lespaul.mtl', function( materials ) {
     materials.preload();
     var objLoader = new THREE.OBJLoader();
     objLoader.setMaterials( materials );
     objLoader.setPath( assetsDir );
-    objLoader.load( modelName+'.obj', function ( object ) {
+    objLoader.load( 'lespaul.obj', function ( object ) {
       guitarMesh = object;
       guitarMesh.traverse(function (child) {
         if (child instanceof THREE.Mesh && useDynamicShadows) {
