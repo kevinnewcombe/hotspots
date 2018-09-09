@@ -35,11 +35,11 @@ var sceneVariables = {}
 let orientationVars = {
   'landscape': {
     'ground_y': -10,
-    'world_angle': 0
+    'world_angle': THREE.Math.degToRad(0)
   },
   'portrait': {
     'ground_y': -26,
-    'world_angle': 90.3
+    'world_angle': THREE.Math.degToRad(90.3)
   }
 }
 
@@ -131,15 +131,10 @@ function init() {
   sceneVariables.aspectRatio = aspectRatio;
   if(screenWidth < screenHeight){
     orientation = 'portrait';
-    geometryContainer.rotation.set(0, 0, THREE.Math.degToRad(orientationVars[orientation].world_angle));
   }else{
     orientation = 'landscape';
   }
-  if(orientation == 'landscape'){
-    sceneVariables.cameraFOV = (aspectRatio / 1.8) * 10;
-  }else{
-    sceneVariables.cameraFOV = 10;
-  }
+
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(screenWidth, screenHeight);
@@ -164,6 +159,8 @@ function init() {
   canvas = canvas[0];
   canvas.addEventListener('click', onCanvasClick);
 
+  setGeometryOrientation();
+  geometryContainer.rotation.set(0, 0, orientationVars[orientation].world_angle);
   if(!useDynamicShadows){
     // load the ground shadow onto a plane
     var loader = new THREE.TextureLoader();
@@ -478,6 +475,22 @@ function onCanvasClick(){
   }
 }
 
+function setGeometryOrientation(){
+  let cameraAngle = controls.getAzimuthalAngle();
+  markers.forEach(function (marker) {
+    if(orientation == 'landscape'){
+      marker.rotation.set(0, cameraAngle, 0);
+    }else{
+      marker.rotation.set(cameraAngle, 0 , 0);
+    }
+  });
+  if(orientation == 'landscape'){
+    sceneVariables.cameraFOV = (aspectRatio / 1.8) * 10;
+  }else{
+    sceneVariables.cameraFOV = 10;
+  }
+}
+
 function onWindowResize( event ) {
   if(activeMarker){
     positionMarker();
@@ -495,19 +508,8 @@ function onWindowResize( event ) {
       orientation = 'landscape';
     }
 
-    let cameraAngle = controls.getAzimuthalAngle();
-    markers.forEach(function (marker) {
-      if(orientation == 'landscape'){
-        marker.rotation.set(0, cameraAngle, 0);
-      }else{
-        marker.rotation.set(cameraAngle, 0 , 0);
-      }
-    });
-
-
-
     TweenLite.to(geometryContainer.rotation, 0.25, { 
-      z : THREE.Math.degToRad(orientationVars[orientation].world_angle), 
+      z : orientationVars[orientation].world_angle, 
       ease: Power1.easeInOut
     });
     TweenLite.to(plane.position, 0.25, { 
