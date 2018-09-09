@@ -160,6 +160,8 @@ function init() {
   canvas.addEventListener('click', onCanvasClick);
 
   setGeometryOrientation();
+  scaleCamera();
+  
   geometryContainer.rotation.set(0, 0, orientationVars[orientation].world_angle);
   if(!useDynamicShadows){
     // load the ground shadow onto a plane
@@ -200,7 +202,7 @@ function init() {
   }
 
   loadMarkers();
-  // loadMarkerHelper();
+  loadMarkerHelper();
   if(useGuitarModel){
     loadGuitar();
   }else{
@@ -491,6 +493,18 @@ function setGeometryOrientation(){
   }
 }
 
+function scaleCamera(){
+  if(orientation == 'landscape'){
+    sceneVariables.cameraFOV = 1 / (aspectRatio / 1.8) * 10;
+    camera.fov = sceneVariables.cameraFOV;
+    camera.updateProjectionMatrix();
+  }else{
+    sceneVariables.cameraFOV = 1 / aspectRatio * 10;
+    camera.fov = sceneVariables.cameraFOV;
+    camera.updateProjectionMatrix();
+  }
+}
+
 function onWindowResize( event ) {
   if(activeMarker){
     positionMarker();
@@ -517,19 +531,7 @@ function onWindowResize( event ) {
       ease: Power1.easeInOut
     });
   }
-  if(orientation == 'landscape'){
-    sceneVariables.cameraFOV = 1 / (aspectRatio / 1.8) * 10;
-    camera.fov = sceneVariables.cameraFOV;
-    camera.updateProjectionMatrix();
-
-    if(aspectRatio < 1.4){
-      // move the camera out
-    }else{
-      // keep the camera at its default distance
-    }
-  }
-
-
+  scaleCamera();
   renderer.setSize( screenWidth, screenHeight );
   camera.aspect = aspectRatio;
   camera.updateProjectionMatrix();
