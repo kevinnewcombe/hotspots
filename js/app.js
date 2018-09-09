@@ -9,16 +9,28 @@ let useDynamicShadows = true;
 let useGuitarModel = true;
 
 // geometry
-//let assetsDir = 'assets/';
-let assetsDir = 'https://s3.ca-central-1.amazonaws.com/kevinnewcombe/codepen/guitar/';
+let assetsDir = 'assets/';
+// let assetsDir = 'https://s3.ca-central-1.amazonaws.com/kevinnewcombe/codepen/guitar/';
 let modelName = 'lespaul';
 
 // preloader
 const preloader = document.getElementById('preloader');
 const dial = document.getElementById('dial');
-
-
 THREE.ImageUtils.crossOrigin = "";
+
+// markers
+let markerHelper;
+const geometryContainer = new THREE.Object3D();
+const tooltipContainer = document.getElementById('tooltip');
+let activeMarker = null;
+const markers = [];
+
+// raycasting
+var raycaster = new THREE.Raycaster();
+var mouse = new THREE.Vector2();
+
+// testing
+var sceneVariables = {}
 
 let orientationVars = {
   'landscape': {
@@ -30,41 +42,87 @@ let orientationVars = {
     'world_angle': 90.3
   }
 }
+
 let orientation = null;
 var plane;
 
-// markers
-let markerHelper;
-const geometryContainer = new THREE.Object3D();
-const markerData = {
-  'tailpiece' : {
+
+// reference: http://www.gibson.com/Products/Electric-Guitars/2018/Custom/50th-Anniversary-1968-Les-Paul-Custom.aspx
+const markerData = [
+  {
     position : [-15.8,0,1.4],
     headline : 'Tailpiece',
     description : 'Lightweight Aluminum Stopbar'
   },
-  'bridge' : {
+  {
     position : [-13.52,0,1.4],
     headline : 'Bridge',
     description : 'ABR-1 Tune-o-matic w/ Nylon Saddles'
   },
-  'neckpickup' : {
+  {
     position: [-6.96,1.78,1.4],
     headline : 'Neck Pickup',
     description : '68 Custom Humbucker'
-  }
-};
+  },
+  {
+    position: [-20.47,4.65,1.4],
+    headline : 'Body',
+    description : '2-Piece Maple Top, 1-Piece Mahogany Back, Nitrocellulose Lacquer Finish'
+  },
+	{
+		position: [6.66,0.02,1],
+		headline: 'Neck',
+	  description: 'Solid Mahogany, Long Tenon, Hide Glue Fit, 14 Degree Peghead Angle'
+	},
+	{
+		position: [13.56,0,1.4],
+		headline: 'Inlays',
+		description: 'Pearl Block'
+	},
+	{
+		position: [9.27,-1.1,1.4],
+		headline: 'Fingerboard Material',
+		description: 'Solid Ebony, Hide Glue Fit'
+	},
+	{
+		position: [0.85,-1.25,1.4],
+		headline: 'Fingerboard Radius',
+		description: '12"'
+	},
+	{
+		position: [17.92,-0.05,1.4],
+		headline: 'Nut Material',
+		description: 'Nylon'
+	},
+	{
+		position: [7.33,0,-0.8],
+		headline: 'Neck Profile',
+		description: 'Medium-Chunky C-Shape, scanned from original.'
+	},
+	{
+		position: [-3.26,0.02,-2.1],
+		headline: 'Truss Rod',
+		description: 'Tubeless'
+	},
+	{
+		position: [-17.99,-3.73,0.8],
+		headline: 'Controls',
+		description: '2 500K CTS Volume Pots, 2 500K CTS Tone Pots, Hand-Wired Harness with Black Beauty Capacitors, Switchcraft Toggle Switch.<br />Black Witch Hat Control Knobs w/ Gold Reflectors'
+	},
+	{
+		position: [-9.2,-2.95,0.6],
+		headline: 'Pick Guard',
+		description: 'Replica Multi-ply Acrylic'
+	},
+	{
+		position: [-3.92,3.32,1.4],
+		headline: 'Switch',
+		description: 'Cream Tip with Molded Black'
+	}
+];
 
-const tooltipContainer = document.getElementById('tooltip');
-let activeMarker = null;
 
-const markers = [];
 
-// raycasting
-var raycaster = new THREE.Raycaster();
-var mouse = new THREE.Vector2();
-
-// testing
-var sceneVariables = {}
 
 function init() {
   scene.add(geometryContainer);
@@ -125,11 +183,7 @@ function init() {
         plane.rotation.set(THREE.Math.degToRad(90), 0, 0 );
         scene.add( plane );
       },
-
-      // onProgress callback currently not supported
       undefined,
-
-      // onError callback
       function ( err ) {
         console.error( 'An error happened.' );
       }
@@ -149,7 +203,7 @@ function init() {
   }
 
   loadMarkers();
-  loadMarkerHelper();
+  // loadMarkerHelper();
   if(useGuitarModel){
     loadGuitar();
   }else{
@@ -214,9 +268,11 @@ function loadGuitar(){
   var onProgress = function ( xhr ) {
     if ( xhr.lengthComputable ) {
       updateLoadingProgress(xhr.loaded / xhr.total);
-      var percentComplete = Math.round(xhr.loaded / xhr.total * 100);
       if(xhr.loaded == xhr.total){
         preloader.classList.add('is-hidden');
+        window.setTimeout(function(){
+          preloader.parentNode.removeChild(preloader);
+        }, 250);
       }
     }
   };
@@ -238,12 +294,6 @@ function loadGuitar(){
         }
       });
       geometryContainer.add(guitarMesh);
-
-      var bbox = new THREE.Box3().setFromObject(guitarMesh);
-      console.log(bbox.min, bbox.max);
-      console.log(Math.abs(bbox.max.x - bbox.min.x)+','+Math.abs(bbox.max.y - bbox.min.y)+','+Math.abs(bbox.max.z - bbox.min.z));
-
-
     }, onProgress);
   });
 }
@@ -257,9 +307,6 @@ function loadGuitarPlaceholder(){
 }
 
 var sceneVariables = {}
-
-
-console.log(sceneVariables);
 function loadMarkerHelper(){
   /*
     For testing only 
@@ -267,12 +314,23 @@ function loadMarkerHelper(){
   */  
   var options = {
     copyPosition : function(){
-      alert(markerHelper.position.x+','+markerHelper.position.y+','+markerHelper.position.z);
+      var string = ',\n';
+      string = string+'\t{\n';
+      string = string+'\t\tposition: ['+markerHelper.position.x+','+markerHelper.position.y+','+markerHelper.position.z+'],\n';
+      string = string+'\t\theadline: \'\',\n';
+      string = string+'\t\tdescription: \'\'\n';
+      string = string+'\t}\n';
+
+      navigator.clipboard.writeText(string).then(function() {
+        alert('Position copied to clipboad');
+      }, function(err) {
+        alert('Could not copy position: ', err);
+      });
     }
   };
   
   var geometry = new THREE.CircleGeometry( 0.5, 32 );
-  var material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+  var material = new THREE.MeshBasicMaterial({ color: 0xFF0000 , side: THREE.DoubleSide});
   markerHelper = new THREE.Mesh( geometry, material );
   markerHelper.position.set(0,0,1.4);
   scene.add( markerHelper );
@@ -283,7 +341,7 @@ function loadMarkerHelper(){
   markerGUI.add(markerHelper.position, 'x', -30, 30).step(0.01).listen();
   markerGUI.add(markerHelper.position, 'y', -10, 10).step(0.01).listen();
   markerGUI.add(markerHelper.position, 'z', -5, 5).step(0.1).listen();
-  markerGUI.add(markerHelper.position, 'z', -5, 5).step(0.1).listen();
+  markerGUI.add(options, 'copyPosition');
   markerGUI.add(sceneVariables, 'aspectRatio').step(0.00001).listen();
   markerGUI.add(sceneVariables, 'cameraFOV').step(0.00001).listen();
 
@@ -296,7 +354,7 @@ function loadMarkers(){
     var markerContainer = new THREE.Object3D();
 
     var geometry = new THREE.TorusGeometry( 0.35, 0.05, 2, 100 );
-    var material = new THREE.MeshBasicMaterial({ color: 0xeeeeee });
+    var material = new THREE.MeshBasicMaterial({ color: 0xcccccc });
     var torus = new THREE.Mesh( geometry, material );
     markerContainer.add( torus );
 
@@ -430,7 +488,6 @@ function onWindowResize( event ) {
   sceneVariables.aspectRatio = aspectRatio;
 
   // change orientation if required
-
   if((orientation == 'landscape' && aspectRatio < 1) || (orientation == 'portrait' && aspectRatio >= 1)){
     if(orientation == 'landscape' && aspectRatio < 1){
       orientation = 'portrait';
@@ -481,7 +538,5 @@ function animate() {
   controls.update();
   renderer.render(scene, camera);
 }
-
-
 
 init(); // light this candle
