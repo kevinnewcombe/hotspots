@@ -124,6 +124,7 @@ animate();
 function onWindowResize( event ) {
   screenWidth = window.innerWidth;
   screenHeight  = window.innerHeight;
+  aspectRatio = screenWidth / screenHeight;
   renderer.setSize( screenWidth, screenHeight );
   camera.aspect = aspectRatio;
   camera.updateProjectionMatrix();
