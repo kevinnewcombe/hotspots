@@ -10,10 +10,11 @@ let assetsDir = 'assets/';
 let modelName = 'lespaul';
 THREE.ImageUtils.crossOrigin = "";
 
-
 // preloader
 const preloader = document.getElementById('preloader');
 
+// markers
+let markers = [];
 screenWidth = window.innerWidth, screenHeight = window.innerHeight, aspectRatio = screenWidth/screenHeight;
 renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(screenWidth, screenHeight);
@@ -31,6 +32,7 @@ scene.add(camera);
 camera.lookAt(new THREE.Vector3(0,0,0));
 controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.minPolarAngle = controls.maxPolarAngle = Math.PI/2;
+controls.addEventListener( 'change', onCameraUpdate ); // rotate the markers with the camera
 
 // add the ground
 let material = new THREE.MeshPhongMaterial({
@@ -83,7 +85,6 @@ lights.forEach(function (lightObj) {
 /* *********************** */
 /*     load the guitar     */
 /* *********************** */
-
 let manager = new THREE.LoadingManager();
 let texture = new THREE.Texture();
 let onProgress = function ( xhr ) {
@@ -118,9 +119,43 @@ mtlLoader.load( 'lespaul.mtl', function( materials ) {
   }, onProgress);
 });
 
+/* *********************** */
+/*                         */
+/*     add the markers     */
+/*                         */
+/* *********************** */
+var markerContainer = new THREE.Object3D();
+
+geometry = new THREE.TorusGeometry( 0.5, 0.1, 3, 100 );
+material = new THREE.MeshBasicMaterial({ color: 0xffffff });
+var torus = new THREE.Mesh( geometry, material );
+markerContainer.add( torus );
+
+geometry = new THREE.CircleGeometry( 0.45, 32 );
+let markerInteriorMaterialDefault = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent:true, opacity:0.66 });
+markerMesh = new THREE.Mesh( geometry, markerInteriorMaterialDefault );
+markerMesh.meshType = 'innercircle';
+markerContainer.add(markerMesh);
+
+markerContainer.position.set(-15.8,0,1.4);
+
+markers.push(markerContainer);
+scene.add( markerContainer );
+
+function onCameraUpdate(){
+  // always have the markers face the camera
+  let cameraAngle = controls.getAzimuthalAngle();
+  markers.forEach(function (marker) {
+   marker.rotation.set(0, cameraAngle, 0);
+  });
+}
+
+
+
+
+
+
 animate();
-
-
 function onWindowResize( event ) {
   screenWidth = window.innerWidth;
   screenHeight  = window.innerHeight;
