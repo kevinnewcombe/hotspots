@@ -132,7 +132,7 @@ var torus = new THREE.Mesh( geometry, material );
 markerContainer.add( torus );
 
 geometry = new THREE.CircleGeometry( 0.45, 32 );
-let markerInteriorMaterialDefault = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent:true, opacity:0.66 });
+let markerInteriorMaterialDefault = new THREE.MeshBasicMaterial({ color: 0x222222, transparent:true, opacity:0.66 });
 markerMesh = new THREE.Mesh( geometry, markerInteriorMaterialDefault );
 markerMesh.meshType = 'innercircle';
 markerContainer.add(markerMesh);
