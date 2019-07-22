@@ -2,15 +2,14 @@
 let scene = new THREE.Scene();
 let renderer, camera, aspectRatio;
 let controls, canvas;
-let pixelRatio = 1.5;
 let screenWidth, screenHeight;
+let pixelRatio = 1.5;
 
 let useDynamicShadows = true;
-let useGuitarModel = true;
 
 // geometry
-let assetsDir = 'assets/';
-// let assetsDir = 'https://s3.ca-central-1.amazonaws.com/kevinnewcombe/codepen/guitar/';
+// let assetsDir = 'assets/';
+let assetsDir = 'https://s3.ca-central-1.amazonaws.com/kevinnewcombe/codepen/guitar/';
 let modelName = 'lespaul';
 
 // preloader
@@ -44,10 +43,10 @@ let orientationVars = {
 }
 
 let orientation = null;
-var plane;
-
+var ground;
 
 // reference: http://www.gibson.com/Products/Electric-Guitars/2018/Custom/50th-Anniversary-1968-Les-Paul-Custom.aspx
+ 
 const markerData = [
   {
     position : [-15.8,0,1.4],
@@ -121,12 +120,8 @@ const markerData = [
 	}
 ];
 
-
-
-
 function init() {
   scene.add(geometryContainer);
-
   screenWidth = window.innerWidth, screenHeight = window.innerHeight, aspectRatio = screenWidth/screenHeight;
   sceneVariables.aspectRatio = aspectRatio;
   if(screenWidth < screenHeight){
@@ -134,17 +129,18 @@ function init() {
   }else{
     orientation = 'landscape';
   }
-
-
+  
+  // set up the renderer and window events
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(screenWidth, screenHeight);
-  renderer.setPixelRatio(pixelRatio);
+  renderer.setPixelRatio(1.5);
   renderer.setClearColor(0xffffff);
   renderer.shadowMap.enabled = true; 
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   document.body.appendChild(renderer.domElement);
   window.addEventListener( 'resize', onWindowResize, false );
   window.addEventListener( 'mousemove', onMouseMove, false );
+	
   addLights();
  
   // camera
@@ -161,53 +157,23 @@ function init() {
 
   setGeometryOrientation();
   scaleCamera();
-  
-  geometryContainer.rotation.set(0, 0, orientationVars[orientation].world_angle);
-  if(!useDynamicShadows){
-    // load the ground shadow onto a plane
-    var loader = new THREE.TextureLoader();
-    loader.load(
-      'assets/shadow.jpg?v=2',
-      function ( texture ) {
-        texture.repeat.set(1,1);
-        var material = new THREE.MeshBasicMaterial( {
-          map: texture,
-          side : THREE.DoubleSide,
-          color: 0xffffff,
-        });
-        var geometry = new THREE.PlaneGeometry(70, 50, 1);
-        plane = new THREE.Mesh( geometry, material );
-        plane.receiveShadow = true;
-        plane.position.y = orientationVars[orientation].ground_y;
-        plane.rotation.set(THREE.Math.degToRad(90), 0, 0 );
-        scene.add( plane );
-      },
-      undefined,
-      function ( err ) {
-        console.error( 'An error happened.' );
-      }
-    );
-  }else{
-    var material = new THREE.MeshPhongMaterial({
-      color: 0xffffff, 
-      side: THREE.DoubleSide,
-      emissive: 0xaaaaaa
-    });
-    var geometry = new THREE.PlaneGeometry(70, 50, 1);
-    plane = new THREE.Mesh( geometry, material );
-    plane.receiveShadow = true;
-    plane.rotation.set(THREE.Math.degToRad(90), 0, 0 );
-    plane.position.y = orientationVars[orientation].ground_y;
-    scene.add( plane );
-  }
 
-  loadMarkers();
+  geometryContainer.rotation.set(0, 0, orientationVars[orientation].world_angle);
+	 var material = new THREE.MeshPhongMaterial({
+		color: 0xffffff, 
+		side: THREE.DoubleSide,
+		emissive: 0xaaaaaa
+	 });
+	 var geometry = new THREE.PlaneGeometry(70, 50, 1);
+	 ground = new THREE.Mesh( geometry, material );
+	 ground.receiveShadow = true;
+	 ground.rotation.set(THREE.Math.degToRad(90), 0, 0 );
+	 ground.position.y = orientationVars[orientation].ground_y;
+	 scene.add( ground );
+  
+	loadMarkers();
   loadMarkerHelper();
-  if(useGuitarModel){
-    loadGuitar();
-  }else{
-    loadGuitarPlaceholder();
-  }
+  loadGuitar();
   animate();
 }
 
@@ -253,25 +219,17 @@ function addLights(){
   });
 }
 
-// preloader
-function updateLoadingProgress(amount){
- deg = amount*300;
- dial.style.transform = 'rotate('+deg+'deg)'; 
-}
 
 
 function loadGuitar(){
   var manager = new THREE.LoadingManager();
   var texture = new THREE.Texture();
-  var lastPercent = 0;
   var onProgress = function ( xhr ) {
     if ( xhr.lengthComputable ) {
-      updateLoadingProgress(xhr.loaded / xhr.total);
+      console.log('loading: '+xhr.loaded / xhr.total);
       if(xhr.loaded == xhr.total){
-        preloader.classList.add('is-hidden');
-        window.setTimeout(function(){
-          preloader.parentNode.removeChild(preloader);
-        }, 250);
+        console.clear();
+        console.log("model loaded");
       }
     }
   };
@@ -297,15 +255,8 @@ function loadGuitar(){
   });
 }
 
-function loadGuitarPlaceholder(){
-  // 17.370596634919863,49.92201164658204,2.7083899974823
-  var geometry = new THREE.BoxGeometry( 49.92201164658204, 17.370596634919863, 2.7083899974823 );
-  var material = new THREE.MeshBasicMaterial({color: 0x000000, wireframe: true});
-  var guitarMesh = new THREE.Mesh( geometry, material );
-  geometryContainer.add( guitarMesh );
-}
-
 var sceneVariables = {}
+
 function loadMarkerHelper(){
   /*
     For testing only 
@@ -328,7 +279,7 @@ function loadMarkerHelper(){
     }
   };
   
-  var geometry = new THREE.CircleGeometry( 0.5, 32 );
+  var geometry = new THREE.SphereGeometry( 0.5, 32, 32 );
   var material = new THREE.MeshBasicMaterial({ color: 0xFF0000 , side: THREE.DoubleSide});
   markerHelper = new THREE.Mesh( geometry, material );
   markerHelper.position.set(0,0,1.4);
@@ -337,9 +288,10 @@ function loadMarkerHelper(){
   var gui = new dat.GUI();
   // var sceneVars = sceneVariables();
   var markerGUI = gui.addFolder('Marker')
-  markerGUI.add(markerHelper.position, 'x', -30, 30).step(0.01).listen();
-  markerGUI.add(markerHelper.position, 'y', -10, 10).step(0.01).listen();
-  markerGUI.add(markerHelper.position, 'z', -5, 5).step(0.1).listen();
+  markerGUI.add(markerHelper.position, 'x', -30, 30).step(0.001).listen();
+  markerGUI.add(markerHelper.position, 'y', -10, 10).step(0.001).listen();
+  markerGUI.add(markerHelper.position, 'z', -5, 5).step(0.001).listen();
+
   markerGUI.add(options, 'copyPosition');
   markerGUI.add(sceneVariables, 'aspectRatio').step(0.00001).listen();
   markerGUI.add(sceneVariables, 'cameraFOV').step(0.00001).listen();
@@ -400,7 +352,7 @@ function positionMarker(){
 
 // raycasting
 function onMouseMove( event ) {
-	mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+  mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
   mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
   
   // rollovers
@@ -526,7 +478,7 @@ function onWindowResize( event ) {
       z : orientationVars[orientation].world_angle, 
       ease: Power1.easeInOut
     });
-    TweenLite.to(plane.position, 0.25, { 
+    TweenLite.to(ground.position, 0.25, { 
       y : orientationVars[orientation].ground_y, 
       ease: Power1.easeInOut
     });
