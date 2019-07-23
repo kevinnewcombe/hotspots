@@ -8,8 +8,7 @@ let pixelRatio = 1.5;
 let useDynamicShadows = true;
 
 // geometry
-// let assetsDir = 'assets/';
-let assetsDir = 'https://s3.ca-central-1.amazonaws.com/kevinnewcombe/codepen/guitar/';
+let assetsDir = 'assets/';
 let modelName = 'lespaul';
 
 // preloader
@@ -21,8 +20,8 @@ THREE.ImageUtils.crossOrigin = "";
 let markerHelper;
 const geometryContainer = new THREE.Object3D();
 const tooltipContainer = document.getElementById('tooltip');
-let activeMarker = null;
-const markers = [];
+let activeMarker = null; // the marker that is currently open
+const markers = []; // all markers
 
 // raycasting
 var raycaster = new THREE.Raycaster();
@@ -30,20 +29,6 @@ var mouse = new THREE.Vector2();
 
 // testing
 var sceneVariables = {}
-
-let orientationVars = {
-  'landscape': {
-    'ground_y': -10,
-    'world_angle': THREE.Math.degToRad(0)
-  },
-  'portrait': {
-    'ground_y': -26,
-    'world_angle': THREE.Math.degToRad(90.3)
-  }
-}
-
-let orientation = null;
-var ground;
 
 // reference: http://www.gibson.com/Products/Electric-Guitars/2018/Custom/50th-Anniversary-1968-Les-Paul-Custom.aspx
  
@@ -122,13 +107,10 @@ const markerData = [
 
 function init() {
   scene.add(geometryContainer);
-  screenWidth = window.innerWidth, screenHeight = window.innerHeight, aspectRatio = screenWidth/screenHeight;
-  sceneVariables.aspectRatio = aspectRatio;
-  if(screenWidth < screenHeight){
-    orientation = 'portrait';
-  }else{
-    orientation = 'landscape';
-  }
+  screenWidth = window.innerWidth;
+  screenHeight = window.innerHeight;
+  aspectRatio = screenWidth/screenHeight;
+  
   
   // set up the renderer and window events
   renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -155,22 +137,16 @@ function init() {
   canvas = canvas[0];
   canvas.addEventListener('click', onCanvasClick);
 
-  setGeometryOrientation();
-  scaleCamera();
 
-  geometryContainer.rotation.set(0, 0, orientationVars[orientation].world_angle);
 	 var material = new THREE.MeshPhongMaterial({
 		color: 0xffffff, 
 		side: THREE.DoubleSide,
 		emissive: 0xaaaaaa
 	 });
 	 var geometry = new THREE.PlaneGeometry(70, 50, 1);
-	 ground = new THREE.Mesh( geometry, material );
-	 ground.receiveShadow = true;
-	 ground.rotation.set(THREE.Math.degToRad(90), 0, 0 );
-	 ground.position.y = orientationVars[orientation].ground_y;
-	 scene.add( ground );
+
   
+  setGeometryOrientation();
 	loadMarkers();
   loadMarkerHelper();
   loadGuitar();
@@ -226,11 +202,8 @@ function loadGuitar(){
   var texture = new THREE.Texture();
   var onProgress = function ( xhr ) {
     if ( xhr.lengthComputable ) {
-      console.log('loading: '+xhr.loaded / xhr.total);
-      if(xhr.loaded == xhr.total){
-        console.clear();
-        console.log("model loaded");
-      }
+      console.clear();
+      console.log('loading: '+Math.round((xhr.loaded / xhr.total) * 100)+'%');
     }
   };
 
@@ -254,8 +227,6 @@ function loadGuitar(){
     }, onProgress);
   });
 }
-
-var sceneVariables = {}
 
 function loadMarkerHelper(){
   /*
@@ -286,16 +257,12 @@ function loadMarkerHelper(){
   scene.add( markerHelper );
   
   var gui = new dat.GUI();
-  // var sceneVars = sceneVariables();
   var markerGUI = gui.addFolder('Marker')
   markerGUI.add(markerHelper.position, 'x', -30, 30).step(0.001).listen();
   markerGUI.add(markerHelper.position, 'y', -10, 10).step(0.001).listen();
   markerGUI.add(markerHelper.position, 'z', -5, 5).step(0.001).listen();
 
   markerGUI.add(options, 'copyPosition');
-  markerGUI.add(sceneVariables, 'aspectRatio').step(0.00001).listen();
-  markerGUI.add(sceneVariables, 'cameraFOV').step(0.00001).listen();
-
   markerGUI.open();
 }
 
@@ -327,11 +294,7 @@ function onCameraUpdate(){
   // have the markers always face the camera
   let cameraAngle = controls.getAzimuthalAngle();
   markers.forEach(function (marker) {
-    if(orientation == 'landscape'){
-      marker.rotation.set(0, cameraAngle, 0);
-    }else{
-      marker.rotation.set(cameraAngle, 0 , 0);
-    }
+    marker.rotation.set(0, cameraAngle, 0);
   });
   if(activeMarker){
     positionMarker();
@@ -359,6 +322,7 @@ function onMouseMove( event ) {
   raycaster.setFromCamera( mouse, camera );
   let intersects = raycaster.intersectObjects( scene.children, true );
   let currentMarker = null;
+  
   if(intersects.length){
     if(intersects[0].object.meshType){
       currentMarker = intersects[0].object.markerName;
@@ -430,60 +394,22 @@ function onCanvasClick(){
 }
 
 function setGeometryOrientation(){
+  // rotate the markers to always face the camera
   let cameraAngle = controls.getAzimuthalAngle();
+  console.log('cameraAngle: '+cameraAngle);
   markers.forEach(function (marker) {
-    if(orientation == 'landscape'){
-      marker.rotation.set(0, cameraAngle, 0);
-    }else{
-      marker.rotation.set(cameraAngle, 0 , 0);
-    }
+    marker.rotation.set(0, cameraAngle, 0);
   });
-  if(orientation == 'landscape'){
-    sceneVariables.cameraFOV = (aspectRatio / 1.8) * 10;
-  }else{
-    sceneVariables.cameraFOV = 10;
-  }
-}
-
-function scaleCamera(){
-  if(orientation == 'landscape'){
-    sceneVariables.cameraFOV = 1 / (aspectRatio / 1.8) * 10;
-    camera.fov = sceneVariables.cameraFOV;
-    camera.updateProjectionMatrix();
-  }else{
-    sceneVariables.cameraFOV = 1 / aspectRatio * 10;
-    camera.fov = sceneVariables.cameraFOV;
-    camera.updateProjectionMatrix();
-  }
 }
 
 function onWindowResize( event ) {
   if(activeMarker){
     positionMarker();
   }
+
   screenWidth = window.innerWidth;
   screenHeight  = window.innerHeight;
   aspectRatio = screenWidth / screenHeight;
-  sceneVariables.aspectRatio = aspectRatio;
-
-  // change orientation if required
-  if((orientation == 'landscape' && aspectRatio < 1) || (orientation == 'portrait' && aspectRatio >= 1)){
-    if(orientation == 'landscape' && aspectRatio < 1){
-      orientation = 'portrait';
-    }else{
-      orientation = 'landscape';
-    }
-
-    TweenLite.to(geometryContainer.rotation, 0.25, { 
-      z : orientationVars[orientation].world_angle, 
-      ease: Power1.easeInOut
-    });
-    TweenLite.to(ground.position, 0.25, { 
-      y : orientationVars[orientation].ground_y, 
-      ease: Power1.easeInOut
-    });
-  }
-  scaleCamera();
   renderer.setSize( screenWidth, screenHeight );
   camera.aspect = aspectRatio;
   camera.updateProjectionMatrix();
