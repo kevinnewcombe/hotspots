@@ -3,18 +3,9 @@ let scene = new THREE.Scene();
 let renderer, camera, aspectRatio;
 let controls, canvas;
 let screenWidth, screenHeight;
-let pixelRatio = 1.5;
-
-let useDynamicShadows = true;
 
 // geometry
-let assetsDir = 'assets/';
-let modelName = 'lespaul';
-
-// preloader
-const preloader = document.getElementById('preloader');
-const dial = document.getElementById('dial');
-THREE.ImageUtils.crossOrigin = "";
+let assetsDir = 'model/';
 
 // markers
 let markerHelper;
@@ -31,7 +22,7 @@ var mouse = new THREE.Vector2();
 var sceneVariables = {}
 
 // reference: http://www.gibson.com/Products/Electric-Guitars/2018/Custom/50th-Anniversary-1968-Les-Paul-Custom.aspx
- 
+
 const markerData = [
   {
     position : [-15.8,0,1.4],
@@ -115,10 +106,7 @@ function init() {
   // set up the renderer and window events
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(screenWidth, screenHeight);
-  renderer.setPixelRatio(1.5);
-  renderer.setClearColor(0xffffff);
-  renderer.shadowMap.enabled = true; 
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.setClearColor(0xCCCCCC);
   document.body.appendChild(renderer.domElement);
   window.addEventListener( 'resize', onWindowResize, false );
   window.addEventListener( 'mousemove', onMouseMove, false );
@@ -130,22 +118,28 @@ function init() {
   camera.position.set(0, 0, 200 );
   scene.add(camera);
   camera.lookAt(new THREE.Vector3(0,0,0));
+  
+  // controls
   controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.minPolarAngle = controls.maxPolarAngle = Math.PI/2;
   controls.addEventListener( 'change', onCameraUpdate );
+  
+  // arrow helper
+  var axesHelper = new THREE.AxesHelper( 5 );
+  scene.add( axesHelper );
+
   canvas = document.getElementsByTagName('canvas');
   canvas = canvas[0];
   canvas.addEventListener('click', onCanvasClick);
 
+  var material = new THREE.MeshPhongMaterial({
+    color: 0xffffff, 
+    side: THREE.DoubleSide,
+    emissive: 0xaaaaaa
+  });
 
-	 var material = new THREE.MeshPhongMaterial({
-		color: 0xffffff, 
-		side: THREE.DoubleSide,
-		emissive: 0xaaaaaa
-	 });
-	 var geometry = new THREE.PlaneGeometry(70, 50, 1);
+  var geometry = new THREE.PlaneGeometry(70, 50, 1);
 
-  
   setGeometryOrientation();
 	loadMarkers();
   loadMarkerHelper();
@@ -165,7 +159,7 @@ function addLights(){
       x : 0,
       y : 10,
       z : 450,
-      intensity :0.5
+      intensity:0.5
     }
     ,
     {
@@ -181,21 +175,17 @@ function addLights(){
       x : 0,
       y : 10,
       z : -450,
-      intensity :0.25
+      intensity: 0.25
     }
   ];
-
 
   lights.forEach(function (lightObj) {
     light = lightObj.light;
     light.intensity = lightObj.intensity
     light.position.set(lightObj.x,lightObj.y,lightObj.z);
-    light.castShadow = true;   
     scene.add( light );
   });
 }
-
-
 
 function loadGuitar(){
   var manager = new THREE.LoadingManager();
@@ -211,19 +201,13 @@ function loadGuitar(){
   mtlLoader.setMaterialOptions( { side: THREE.DoubleSide } );
   mtlLoader.setPath( assetsDir );
   mtlLoader.crossOrigin = '';
-  mtlLoader.load( 'lespaul.mtl', function( materials ) {
+  mtlLoader.load( 'guitar.mtl', function( materials ) {
     materials.preload();
     var objLoader = new THREE.OBJLoader();
     objLoader.setMaterials( materials );
     objLoader.setPath( assetsDir );
-    objLoader.load( 'lespaul.obj', function ( object ) {
-      guitarMesh = object;
-      guitarMesh.traverse(function (child) {
-        if (child instanceof THREE.Mesh && useDynamicShadows) {
-          child.castShadow = true;
-        }
-      });
-      geometryContainer.add(guitarMesh);
+    objLoader.load( 'guitar.obj', function ( object ) {
+      geometryContainer.add(object);
     }, onProgress);
   });
 }
@@ -364,11 +348,8 @@ function toScreenPosition(obj, camera){
 
   vector.x = ( vector.x * widthHalf ) + widthHalf;
   vector.y = - ( vector.y * heightHalf ) + heightHalf;
-
-  return { 
-    x: vector.x / pixelRatio,
-    y: vector.y / pixelRatio
-  };
+  
+  return vector;
 };
 
 function onCanvasClick(){
