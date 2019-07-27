@@ -114,8 +114,8 @@ function init() {
   addLights();
  
   // camera
-  camera = new THREE.PerspectiveCamera(10, aspectRatio, 0.1, 200000);
-  camera.position.set(0, 0, 200 );
+  camera = new THREE.PerspectiveCamera(10, aspectRatio, 0.1, 100000);
+  camera.position.set(0, 0, 10 );
   scene.add(camera);
   camera.lookAt(new THREE.Vector3(0,0,0));
   
@@ -142,7 +142,7 @@ function init() {
 
   setGeometryOrientation();
 	loadMarkers();
-  loadMarkerHelper();
+  // loadMarkerHelper();
   loadGuitar();
   animate();
 }
@@ -158,15 +158,15 @@ function addLights(){
       light : frontLight,
       x : 0,
       y : 10,
-      z : 450,
+      z : 100,
       intensity:0.5
     }
     ,
     {
       light : topLight,
-      x : 0,
-      y : 50,
-      z : 0,
+      x : -10,
+      y : 10,
+      z : 100,
       intensity: 0.5
     }
     ,
@@ -174,8 +174,8 @@ function addLights(){
       light : backLight,
       x : 0,
       y : 10,
-      z : -450,
-      intensity: 0.25
+      z : 100,
+      intensity: 0.5
     }
   ];
 
@@ -185,30 +185,20 @@ function addLights(){
     light.position.set(lightObj.x,lightObj.y,lightObj.z);
     scene.add( light );
   });
+  
+//   var light = new THREE.AmbientLight( 0x404040 ); // soft white light
+//   light.intensity = 5;
+// scene.add( light );
 }
 
 function loadGuitar(){
-  var manager = new THREE.LoadingManager();
-  var texture = new THREE.Texture();
-  var onProgress = function ( xhr ) {
-    if ( xhr.lengthComputable ) {
-      console.clear();
-      console.log('loading: '+Math.round((xhr.loaded / xhr.total) * 100)+'%');
-    }
-  };
-
-  var mtlLoader = new THREE.MTLLoader();
-  mtlLoader.setMaterialOptions( { side: THREE.DoubleSide } );
-  mtlLoader.setPath( assetsDir );
-  mtlLoader.crossOrigin = '';
-  mtlLoader.load( 'guitar.mtl', function( materials ) {
-    materials.preload();
-    var objLoader = new THREE.OBJLoader();
-    objLoader.setMaterials( materials );
-    objLoader.setPath( assetsDir );
-    objLoader.load( 'guitar.obj', function ( object ) {
-      geometryContainer.add(object);
-    }, onProgress);
+  const gltfLoader = new THREE.GLTFLoader();
+  const url = 'model/scene.gltf';
+  gltfLoader.load(url, (gltf) => {
+    const root = gltf.scene;
+//    scene.add(root);
+    geometryContainer.add(root);
+    root.rotation.set(0, 0, THREE.Math.degToRad(270));
   });
 }
 
